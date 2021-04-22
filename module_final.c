@@ -83,6 +83,42 @@ int *block_bitmap;
 #define unset_bit(A,k)   ( A[(k)/32] &= ~(1 << ((k)%32)) )
 #define get_bit(A,k)    ( A[(k)/32] & (1 << ((k)%32)) )
 
+struct file *file_open(const char *path, int flags, int rights) {
+	struct file *filp = NULL;
+	int err = 0;
+
+	filp = filp_open(path, flags, rights);
+	if (IS_ERR(filp)) {
+		err = PTR_ERR(filp);
+		printk("%d\n", err);
+		return NULL;
+	}
+	return filp;
+}
+
+void file_close(struct file *file) {
+	filp_close(file, NULL);
+}
+
+int file_read(struct file *file, unsigned long long offset, void *data, unsigned int size) {
+	int ret;
+
+	ret = kernel_read(file, data, size, &offset);
+
+	return ret;
+}
+
+int file_write(struct file *file, unsigned long long offset, void *data, unsigned int size) {
+	int ret;
+
+	ret = kernel_write(file, data, size, &offset);
+	vfs_llseek(file, 0, SEEK_SET);
+	//file_sync(file);
+
+	return ret;
+}
+
+
 int * read_bitmap(int offset, int bitmap_size) {
 	int ret_;
 
@@ -93,7 +129,7 @@ int * read_bitmap(int offset, int bitmap_size) {
 	return bitmap;
 }
 
-int * write_bitmap() {
+int * write_bitmap(int offset, int bitmap_size) {
 	int ret_;
 
 	struct file *res = file_open("/home/rtmy/me", O_RDWR, 0);
@@ -115,25 +151,25 @@ void unset_bitmap(int offset, int bitmap_size, int pos) {
 
 int get_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
-	get_bit(bitmap, pos);
+	return get_bit(bitmap, pos);
 }
 
 int acquire_free_block(in *node) {
 	// TODO: search closer to node blocks 
-	int * bitmap = read_bitmap(BLOCK_MAP_SIZE, BLOCK_MAP_SIZE);
 	int i;
 	int block = -1;
+	int ret_;
 	for (i = 0; i < BLOCK_MAP_SIZE; i++) {
-		if (!(get_bitmap(node_bitmap, i))) {
+		if (!(get_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, i))) {
 			block = i;	
 			break;
 		}
 	}
 
 	if (block > 0) {
-		set_bitmap(BLOCK_OFFSET, BLOCK_MAP_SIZE, block)
+		set_bitmap(BLOCK_OFFSET, BLOCK_MAP_SIZE, block);
 
-		for (i = 0; i < BLOCK_LIST_SIZE, node->data[i] != 0x00; i++) {
+		for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++) {
 			;;
 		}
 		node->data[i] = block;
@@ -146,10 +182,13 @@ int acquire_free_block(in *node) {
 	return -1;
 }
 
-int free_blocks(int *node) {
+void free_blocks(in *node) {
+	struct file *ret = file_open("/home/rtmy/me", O_RDWR, 0);
+
 	int b;
 	int ret_;
-	for (i = 0; i < BLOCK_LIST_SIZE, node->data[i] != 0x00; i++) {
+	int i;
+	for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++) {
 			b = node->data[i];
 			unset_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, b);
 
@@ -199,44 +238,10 @@ static int device_release(struct inode *inode, struct file *file) {
 	return 0;
 }
 
-struct file *file_open(const char *path, int flags, int rights) {
-	struct file *filp = NULL;
-	int err = 0;
-
-	filp = filp_open(path, flags, rights);
-	if (IS_ERR(filp)) {
-		err = PTR_ERR(filp);
-		printk("%d\n", err);
-		return NULL;
-	}
-	return filp;
-}
-
-void file_close(struct file *file) {
-	filp_close(file, NULL);
-}
-
-int file_read(struct file *file, unsigned long long offset, void *data, unsigned int size) {
-	int ret;
-
-	ret = kernel_read(file, data, size, &offset);
-
-	return ret;
-}
 
 int file_sync(struct file *file) {
 	vfs_fsync(file, 0);
 	return 0;
-}
-
-int file_write(struct file *file, unsigned long long offset, void *data, unsigned int size) {
-	int ret;
-
-	ret = kernel_write(file, data, size, &offset);
-	vfs_llseek(file, 0, SEEK_SET);
-	//file_sync(file);
-
-	return ret;
 }
 
 in * get_inode(char *path) {
@@ -298,7 +303,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 		int ic = sb->inode_counter;
 		int i;
 
-		for (i = 0; i < BLOCK_LIST_SIZE, root->data[i] != 0x00; i++) {
+		for (i = 0; (i < BLOCK_LIST_SIZE) && (root->data[i] != 0x00); i++) {
 			block_pointer = root->data[i];
 		}
 		
@@ -323,10 +328,10 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					return node;
 				} else {
 					in *node = kmalloc(sizeof(in), GFP_KERNEL);
-					for (i = 0; i < DIR_LIST_SIZE, dir_list[i] != 0x00; i++) {
+					for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
 						ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
 						printk("read node %d", ret_);
-						printk("Foudn file %s", *(node->filename));
+						printk("Foudn file %s", node->filename);
 						if (!(strcmp(filename, node->filename))) {
 							printk("File exists, returning\n");
 							return node;
@@ -398,9 +403,10 @@ int read_from_file(in *node, char *data) {
 	struct file *res = file_open("/home/rtmy/me", O_RDWR, 0);
 	int ret_ = 0;
 	int i;
+	int j;
 	int b;
 
-	for (i = 0; i < BLOCK_LIST_SIZE, node->data[i] != 0x00; i++) {
+	for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++) {
 			;;
 	}
 
@@ -453,7 +459,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 	int i;
 	int ret_;
 
-	for (i = 0; i < len && i < BUF_LEN; i++) {
+	for (i = 0; (i < len) && (i < BUF_LEN); i++) {
 		get_user(Message[i], buffer + i);
 	}
 	
@@ -475,6 +481,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		char am = Message[i+1];
 
 		in *node = get_inode(path);
+		printk("created inode %p", node);
 
 	} else if (Message[0] == '>') {
 
