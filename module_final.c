@@ -147,17 +147,20 @@ void set_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
 	set_bit(bitmap, pos);
 	write_bitmap(offset, bitmap_size, bitmap);
+	free(bitmap);
 }
 
 void unset_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
 	unset_bit(bitmap, pos);
 	write_bitmap(offset, bitmap_size, bitmap);
+	free(bitmap);
 }
 
 int get_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
 	return get_bit(bitmap, pos);
+	free(bitmap);
 }
 
 int acquire_free_block(in *node) {
@@ -240,6 +243,7 @@ void write_msg(char* msg) {
 	char * resp = kmalloc(MSG_BUFFER_LEN, GFP_KERNEL);
 	snprintf(resp, strlen(msg)+1, "%s", msg);
 	strncpy(msg_buffer, resp, MSG_BUFFER_LEN);
+	free(resp);
 }
 
 in * get_inode(char *path) {
@@ -265,6 +269,10 @@ in * get_inode(char *path) {
 			in *node = get_inode_rec(root_node, sb, ret, path+sizeof(char));
 			return node;
 		}
+
+		free(activation_value);
+		free(sb);
+		free(root_node);
 
 	} else {
 		int activation_byte = 1;
@@ -346,6 +354,8 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					// TODO: to a distinct fn
 					++sb->inode_counter;
 					ret_ = file_write(ret, sizeof(int), sb, sizeof(superblock_t));
+
+					free(dir_list);
 
 					return node; 
 				}
@@ -512,6 +522,8 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		ret_ = write_to_file(node, data);
 
+		free(data);
+
 	} else if (Message[0] == 'c') {
 		// todo function of parsing touch message
 		char m = Message[2];
@@ -528,6 +540,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		char *data = read_from_file(node);
 		write_msg(data);
+		free(data);
 	}
 
 	// cp 
@@ -535,6 +548,8 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 	// insert inode to target descendants
 
 	Message_Ptr = Message;
+
+	free(node);
 
 	return i;
 }
