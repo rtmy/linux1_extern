@@ -1,8 +1,9 @@
 # linux1_extern
 
-## TODO
+## TODO module
 * rm
 * nested dirs
-* refactoring
-* * int -> size_t
-* * free each malloc
+
+## TODO refactoring
+* int -> size_t
+* free each malloc
