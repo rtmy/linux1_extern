@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 
 int main(int argc, char *argv[]) {
@@ -28,20 +30,19 @@ int main(int argc, char *argv[]) {
 
     listen(listenfd, 10);
 
-    int fp = open("/dev/module"/, O_RDONLY);
-    printf("FP=%d\n", fp);
+    char str[1000];
 
-    off_t off = lseek(fp, 0, SEEK_SET);
-    ssize_t len = read(fp, str, sizeof str);
-    str[len]=0;
-    printf("%d, %d=%s\n", len, static_cast<int>(off), str);
-
-    close(fp);
 
     while(1) {
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
-                                                                                                                                                                              
-        snprintf(sendBuff, sizeof(sendBuff), "Ground to major bye-bye Tom\n");
+	int fp = open("/dev/module", O_RDONLY);
+
+	off_t off = lseek(fp, 0, SEEK_SET);
+	ssize_t len = read(fp, str, sizeof str);
+	str[len]=0;
+	close(fp);
+
+        snprintf(sendBuff, len*sizeof(char), "%s", str);
         write(connfd, sendBuff, strlen(sendBuff));
 
         close(connfd);
