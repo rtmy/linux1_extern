@@ -1,5 +1,8 @@
 # linux1_extern
 
+## TODO project
+* makefile update
+
 ## TODO module
 * rm
 * nested dirs
