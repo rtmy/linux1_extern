@@ -18,7 +18,7 @@ MODULE_VERSION("0.01");
 
 #define DEVICE_NAME "minifs_device"
 #define MSG "Loaded minifs and minifs char device\n"
-#define MSG_BUFFER_LEN 20000
+#define MSG_BUFFER_LEN 2000
 #define BUF_LEN 20000
 
 #define FILESIZE 100
@@ -263,7 +263,11 @@ in * get_inode(char *path) {
 	int *activation_value = kmalloc(sizeof(int), GFP_KERNEL);
 	ret_ = file_read(ret, 0, activation_value, sizeof(int));
 
-	printk("Formatted %d\n", *activation_value);
+	char ans[] = "Formatted";
+	char * resp = kmalloc(MSG_BUFFER_LEN*sizeof(char), GFP_KERNEL);
+    snprintf(resp, (strlen(ans)+2)*sizeof(char), "%s %d", ans, *activation_value);
+	printk(resp);
+    strncpy(msg_buffer, resp, MSG_BUFFER_LEN);
 
 	if (*activation_value == 1) {
 
