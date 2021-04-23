@@ -16,44 +16,6 @@ MODULE_AUTHOR("Artemy Urodovskikh");
 MODULE_DESCRIPTION("MiniFS driver module that uses VFS backend");
 MODULE_VERSION("0.01");
 
-typedef struct inode_mini {
-	char filename[FILESIZE];
-	char is_directory;
-	int created;
-	int accepted;
-	int updated;
-
-	int uid;
-	int gid;
-
-	int am;
-
-	// data = concat: block_offset + c*block_size for c in data
-	short data[BLOCK_LIST_SIZE]; // unsigned long long for usage as offset
-
-	int inode_id;
-} in;
-
-typedef struct superblock {
-	int inode_counter;
-} superblock_t;
-
-static struct file_operations file_ops = {
-	.read = device_read,
-	.write = device_write,
-	.open = device_open,
-	.release = device_release
-};
-
-static int device_open(struct inode *, struct file *);
-static int device_release(struct inode *, struct file *);
-static ssize_t device_read(struct file *, char *, size_t, loff_t *);
-static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
-
-#define set_bit(A,k)     ( A[(k)/32] |= (1 << ((k)%32)) )
-#define unset_bit(A,k)   ( A[(k)/32] &= ~(1 << ((k)%32)) )
-#define get_bit(A,k)    ( A[(k)/32] & (1 << ((k)%32)) )
-
 #define DEVICE_NAME "minifs_device"
 #define FILESYSTEM "/home/rtmy/me"
 
@@ -75,9 +37,46 @@ static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
 #define BLOCK_OFFSET INODE_OFFSET+sizeof(in)*INODES+772
 #define DIR_LIST_SIZE BLOCKSIZE/sizeof(short)
 
+#define set_bit(A,k)     ( A[(k)/32] |= (1 << ((k)%32)) )
+#define unset_bit(A,k)   ( A[(k)/32] &= ~(1 << ((k)%32)) )
+#define get_bit(A,k)    ( A[(k)/32] & (1 << ((k)%32)) )
+
+static int device_open(struct inode *, struct file *);
+static int device_release(struct inode *, struct file *);
+static ssize_t device_read(struct file *, char *, size_t, loff_t *);
+static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
+
+typedef struct inode_mini {
+	char filename[FILESIZE];
+	char is_directory;
+	int created;
+	int accepted;
+	int updated;
+
+	int uid;
+	int gid;
+
+	int am;
+
+	short data[BLOCK_LIST_SIZE]; // unsigned long long for usage as offset
+
+	int inode_id;
+} in;
+
+typedef struct superblock {
+	int inode_counter;
+} superblock_t;
+
 in * get_inode_rec(in *, superblock_t *, struct file *, char *);
 in * create_inode(char *, int, struct file *);
-// TODO: df -ah 
+
+static struct file_operations file_ops = {
+	.read = device_read,
+	.write = device_write,
+	.open = device_open,
+	.release = device_release
+};
+
 
 static int major_num;
 static int device_open_count = 0;
@@ -147,20 +146,20 @@ void set_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
 	set_bit(bitmap, pos);
 	write_bitmap(offset, bitmap_size, bitmap);
-	free(bitmap);
+	kfree(bitmap);
 }
 
 void unset_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
 	unset_bit(bitmap, pos);
 	write_bitmap(offset, bitmap_size, bitmap);
-	free(bitmap);
+	kfree(bitmap);
 }
 
 int get_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
 	return get_bit(bitmap, pos);
-	free(bitmap);
+	kfree(bitmap);
 }
 
 int acquire_free_block(in *node) {
@@ -243,7 +242,7 @@ void write_msg(char* msg) {
 	char * resp = kmalloc(MSG_BUFFER_LEN, GFP_KERNEL);
 	snprintf(resp, strlen(msg)+1, "%s", msg);
 	strncpy(msg_buffer, resp, MSG_BUFFER_LEN);
-	free(resp);
+	kfree(resp);
 }
 
 in * get_inode(char *path) {
@@ -270,9 +269,9 @@ in * get_inode(char *path) {
 			return node;
 		}
 
-		free(activation_value);
-		free(sb);
-		free(root_node);
+		kfree(activation_value);
+		kfree(sb);
+		kfree(root_node);
 
 	} else {
 		int activation_byte = 1;
@@ -355,7 +354,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					++sb->inode_counter;
 					ret_ = file_write(ret, sizeof(int), sb, sizeof(superblock_t));
 
-					free(dir_list);
+					kfree(dir_list);
 
 					return node; 
 				}
@@ -523,7 +522,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		ret_ = write_to_file(node, data);
 
-		free(data);
+		kfree(data);
 
 	} else if (Message[0] == 'c') {
 		// todo function of parsing touch message
@@ -541,7 +540,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		char *data = read_from_file(node);
 		write_msg(data);
-		free(data);
+		kfree(data);
 	}
 
 	// cp 
@@ -550,7 +549,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 	Message_Ptr = Message;
 
-	free(node);
+	kfree(node);
 
 	return i;
 }
