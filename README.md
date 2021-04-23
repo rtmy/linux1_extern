@@ -4,6 +4,7 @@
 * makefile update
 
 ## TODO client
+* shell
 * rm, cd, ls, cp, mv, mkdir, cat, touch
 
 ## TODO server
