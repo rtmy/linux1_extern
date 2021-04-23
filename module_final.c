@@ -16,19 +16,6 @@ MODULE_AUTHOR("Artemy Urodovskikh");
 MODULE_DESCRIPTION("MiniFS driver module that uses VFS backend");
 MODULE_VERSION("0.01");
 
-#define DEVICE_NAME "minifs_device"
-#define MSG "Loaded minifs and minifs char device\n"
-#define MSG_BUFFER_LEN 2000
-#define BUF_LEN 20000
-
-#define FILESIZE 100
-#define BLOCK_LIST_SIZE 434
-
-static int device_open(struct inode *, struct file *);
-static int device_release(struct inode *, struct file *);
-static ssize_t device_read(struct file *, char *, size_t, loff_t *);
-static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
-
 typedef struct inode_mini {
 	char filename[FILESIZE];
 	char is_directory;
@@ -51,22 +38,46 @@ typedef struct superblock {
 	int inode_counter;
 } superblock_t;
 
+static struct file_operations file_ops = {
+	.read = device_read,
+	.write = device_write,
+	.open = device_open,
+	.release = device_release
+};
+
+static int device_open(struct inode *, struct file *);
+static int device_release(struct inode *, struct file *);
+static ssize_t device_read(struct file *, char *, size_t, loff_t *);
+static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
+
+#define set_bit(A,k)     ( A[(k)/32] |= (1 << ((k)%32)) )
+#define unset_bit(A,k)   ( A[(k)/32] &= ~(1 << ((k)%32)) )
+#define get_bit(A,k)    ( A[(k)/32] & (1 << ((k)%32)) )
+
+#define DEVICE_NAME "minifs_device"
+#define FILESYSTEM "/home/rtmy/me"
+
+#define MSG "Loaded minifs and minifs char device\n"
+#define MSG_BUFFER_LEN 2000
+#define BUF_LEN 20000
+#define FILESIZE 100
+#define BLOCK_LIST_SIZE 434
+
 #define INODE_MAP_SIZE sizeof(int)*64
 #define BLOCK_MAP_SIZE sizeof(int)*241
 
 #define INODES 2046
 #define BLOCKSIZE 4096
+
 #define INODE_MAP_OFFSET sizeof(int)+sizeof(superblock_t)
 #define BLOCK_MAP_OFFSET INODE_MAP_OFFSET+INODE_MAP_SIZE
 #define INODE_OFFSET BLOCK_MAP_OFFSET+BLOCK_MAP_SIZE
 #define BLOCK_OFFSET INODE_OFFSET+sizeof(in)*INODES+772
 #define DIR_LIST_SIZE BLOCKSIZE/sizeof(short)
 
-// TODO: forward decl
 in * get_inode_rec(in *, superblock_t *, struct file *, char *);
 in * create_inode(char *, int, struct file *);
 // TODO: df -ah 
-
 
 static int major_num;
 static int device_open_count = 0;
@@ -79,10 +90,6 @@ static char *Message_Ptr;
 int *inode_bitmap;
 int *block_bitmap;
 
-#define set_bit(A,k)     ( A[(k)/32] |= (1 << ((k)%32)) )
-#define unset_bit(A,k)   ( A[(k)/32] &= ~(1 << ((k)%32)) )
-#define get_bit(A,k)    ( A[(k)/32] & (1 << ((k)%32)) )
-
 struct file *file_open(const char *path, int flags, int rights) {
 	struct file *filp = NULL;
 	int err = 0;
@@ -90,7 +97,6 @@ struct file *file_open(const char *path, int flags, int rights) {
 	filp = filp_open(path, flags, rights);
 	if (IS_ERR(filp)) {
 		err = PTR_ERR(filp);
-		printk("%d\n", err);
 		return NULL;
 	}
 	return filp;
@@ -123,16 +129,13 @@ int file_write(struct file *file, unsigned long long offset, void *data, unsigne
 	return ret;
 }
 
-
 int * read_bitmap(int offset, int bitmap_size) {
 	int ret_;
 
-	struct file *res = file_open("/home/rtmy/me", O_RDWR, 0);
+	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 
 	int * bitmap = kmalloc(bitmap_size, GFP_KERNEL);
 	ret_ = file_read(res, offset, bitmap, bitmap_size);
-
-	printk("in newly read %d", get_bit(bitmap, 0));
 
 	return bitmap;
 }
@@ -140,20 +143,15 @@ int * read_bitmap(int offset, int bitmap_size) {
 void write_bitmap(int offset, int bitmap_size, int *bitmap) {
 	int ret_;
 
-	struct file *res = file_open("/home/rtmy/me", O_RDWR, 0);
-
-	printk("wroating %d", get_bit(bitmap, 0));
-
+	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 	ret_ = file_write(res, offset, bitmap, bitmap_size);
 
 	int * bm = read_bitmap(offset, bitmap_size);
-	printk("after wrote %d", get_bit(bm, 0));
 }
 
 void set_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
 	set_bit(bitmap, pos);
-	printk("ok set %d", get_bit(bitmap, pos));
 	write_bitmap(offset, bitmap_size, bitmap);
 }
 
@@ -179,7 +177,6 @@ int acquire_free_block(in *node) {
 			break;
 		}
 	}
-	printk("have block %d", block);
 
 	if (block > 0) {
 		set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, block);
@@ -189,17 +186,16 @@ int acquire_free_block(in *node) {
 		}
 		node->data[i] = block;
 
-		struct file *ret = file_open("/home/rtmy/me", O_RDWR, 0);
+		struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 		ret_ = file_write(ret, (node->inode_id)*sizeof(in)+INODE_OFFSET, node, sizeof(in));
 
 		return block;
 	}
-	printk("bbmg!");
 	return -1;
 }
 
 void free_blocks(in *node) {
-	struct file *ret = file_open("/home/rtmy/me", O_RDWR, 0);
+	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 
 	int b;
 	int ret_;
@@ -213,13 +209,6 @@ void free_blocks(in *node) {
 
 	ret_ = file_write(ret, (node->inode_id)*sizeof(in)+INODE_OFFSET, node, sizeof(in));
 }
-
-static struct file_operations file_ops = {
-	.read = device_read,
-	.write = device_write,
-	.open = device_open,
-	.release = device_release
-};
 
 static ssize_t device_read(struct file *filp, char *buffer, size_t len, loff_t *offset) {
 	int bytes_read = 0;
@@ -255,14 +244,10 @@ static int device_release(struct inode *inode, struct file *file) {
 }
 
 void write_msg(char* msg) {
-	printk("b4 write %s\n", msg);
 	char * resp = kmalloc(MSG_BUFFER_LEN, GFP_KERNEL);
 	snprintf(resp, strlen(msg)+1, "%s", msg);
 	strncpy(msg_buffer, resp, MSG_BUFFER_LEN);
-	printk("a4 %s\n", resp);
-	printk("ok");
 }
-
 
 in * get_inode(char *path) {
 	int ret_;
@@ -274,8 +259,6 @@ in * get_inode(char *path) {
 
 	char ans[] = "Formatted";
 	write_msg(ans);
-
-	printk(ans);
 
 	if (*activation_value == 1) {
 
@@ -308,9 +291,7 @@ in * get_inode(char *path) {
 		short dir_list[DIR_LIST_SIZE] = { 0x00 };
 		ret_ = file_write(ret, BLOCK_OFFSET, &dir_list, sizeof(dir_list));
 
-		printk("form");
 		set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0);
-		printk("opening %d", get_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0));
 		return &root;
 	}
 
@@ -321,7 +302,6 @@ in * get_inode(char *path) {
 in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 	// TODO: (cd) ignore everything, return inode
 	// TODO: (mkdir) or (touch) depending on command, create different inode types
-	printk("got in rec");
 
 	int ret_;
 	in *node;
@@ -352,7 +332,6 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 
 					// TODO: to a distinct fn
 					++sb->inode_counter;
-					printk("new sb %d", sb->inode_counter);
 					ret_ = file_write(ret, sizeof(int), sb, sizeof(superblock_t));
 					
 					return node;
@@ -360,7 +339,6 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					in *node = kmalloc(sizeof(in), GFP_KERNEL);
 					for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
 						ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
-						printk("read node %d", ret_);
 						if (!(strcmp(filename, node->filename))) {
 							printk("File exists, returning\n");
 							return node;
@@ -370,28 +348,22 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					// if mkdir, node->is_directory = 1
 					node = create_inode(filename, ic, ret);
 					dir_list[i] = node->inode_id;
-					printk("dl %d", node->inode_id);
 
 					ret_ = file_write(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
 
 					// TODO: to a distinct fn
 					++sb->inode_counter;
-					printk("new sb %d", sb->inode_counter);
 					ret_ = file_write(ret, sizeof(int), sb, sizeof(superblock_t));
 
 					return node; 
 				}
-
-				printk("111");
 			} else {
 				return root;
-				printk("is it dir? %p %s", root->is_directory, root->filename);
-				printk("000");
+				// printk("is it dir? %p %s", root->is_directory, root->filename);
 				// TODO: (cat) logic for file reading
 			}
 
 		//} else {
-		//	printk("222");
 			// TODO: depending on command, may be >>
 		//}
 	}
@@ -432,16 +404,12 @@ int write_to_file(in *node, char *data) {
 	for (s = 0; (s < BLOCK_LIST_SIZE) && (node->data[s] != 0x00); s++) {
 			;;
 	}
-	printk("ss %d", s);
 	for (i = 0; (i < strlen(data)*sizeof(char)); i+=BLOCKSIZE) {
 		if (i/BLOCKSIZE >= s) {
-			printk("ack new %d %d", i, s);
 			b = acquire_free_block(node);
 		}
 		ret_ += file_write(res, BLOCK_OFFSET+((short) b)*BLOCKSIZE, data+i, BLOCKSIZE);
 	}
-
-	printk("sss %d", node->data[0]);
 
 	printk("wrote %d bytes\n", ret_);
 
@@ -455,25 +423,16 @@ char * read_from_file(in *node) {
 	int j;
 	int b;
 
-	printk("from node %d", node->data[0]);
-
 	for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++) {
 			;;
 	}
 
 	char *buf = kmalloc(BLOCKSIZE*i, GFP_KERNEL);
-	printk("buffered %d", i);
-
-	// and for each block in node->data read it to buffer
 
 	for (j = 0; j < i; j+=1) {
 		b = node->data[j];
 		ret_ += file_read(res, BLOCK_OFFSET+((short) b)*BLOCKSIZE, buf+BLOCKSIZE*j, BLOCKSIZE);
 	}
-
-	printk("JJ %.*s", ret_, buf);
-
-	//ret_ = file_read(res,  BLOCK_OFFSET+((short) node->data[0])*BLOCKSIZE, buf, BLOCKSIZE);
 
 	printk("read %d bytes \n", ret_);
 	printk("content: %s \n", buf);
@@ -510,7 +469,6 @@ char * read_from_file(in *node) {
 // }
 
 static ssize_t device_write(struct file *flip, const char *buffer, size_t len, loff_t *offset) {
-	printk("during write");
 	int i;
 	int ret_;
 
@@ -520,8 +478,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 	
 	if (Message[0] == 'a') {
 		printk("touch");
-		printk("opening %d", get_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0));
-		// todo function of parsing touch message
+
 		char m = Message[2];
 		char path[100] = { 0x00 };
 		i = 2;
@@ -535,7 +492,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		char am = Message[i+1];
 
 		in *node = get_inode(path);
-		printk("created inode %p", node);
 
 	} else if (Message[0] == '>') {
 
@@ -566,10 +522,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			++j;
 		}
 
-		printk("payload %s", data);
-		printk("len %d", strlen(data));
-		printk("target %p", node);
-
 		ret_ = write_to_file(node, data);
 
 	} else if (Message[0] == 'c') {
@@ -584,16 +536,10 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			m = Message[i];
 		}
 
-		printk("read %s", path);
 		in *node = get_inode(path);
-
-		printk("have inode %p", node);
 
 		char *data = read_from_file(node);
 		write_msg(data);
-		//printk("READED %s\n", *data);
-		//printk("sss");
-
 	}
 
 	// cp 

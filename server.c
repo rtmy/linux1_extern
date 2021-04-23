@@ -69,7 +69,6 @@ int main(int argc, char *argv[]) {
         len = write(connfd, sendBuff, strlen(sendBuff));
 
 	fprintf(stderr, "wrote to socket %d %s\n", strlen(sendBuff), sendBuff);
-
         close(connfd);
         sleep(1);
      }
