@@ -46,17 +46,15 @@ int main(int argc, char *argv[]) {
     n = write(sockfd, argv[2], sizeof(argv[2]));
     printf("\n Wrote: %d \n", n);
 
-
-    //if(n < 0)
-
     while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
     {
-	printf("read %d %s\n", n, recvBuff);
+	printf("read %d\n", n);
         recvBuff[n] = 0;
         if(fputs(recvBuff, stdout) == EOF)
         {
             printf("\n Error : Fputs error\n");
         }
+	printf("\n");
     }
 
     if(n < 0)

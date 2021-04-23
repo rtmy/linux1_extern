@@ -254,6 +254,15 @@ static int device_release(struct inode *inode, struct file *file) {
 	return 0;
 }
 
+void write_msg(char* msg) {
+	printk("b4 write %s\n", msg);
+	char * resp = kmalloc(MSG_BUFFER_LEN, GFP_KERNEL);
+	snprintf(resp, strlen(msg)+1, "%s", msg);
+	strncpy(msg_buffer, resp, MSG_BUFFER_LEN);
+	printk("a4 %s\n", resp);
+	printk("ok");
+}
+
 
 in * get_inode(char *path) {
 	int ret_;
@@ -264,10 +273,9 @@ in * get_inode(char *path) {
 	ret_ = file_read(ret, 0, activation_value, sizeof(int));
 
 	char ans[] = "Formatted";
-	char * resp = kmalloc(MSG_BUFFER_LEN*sizeof(char), GFP_KERNEL);
-    snprintf(resp, (strlen(ans)+2)*sizeof(char), "%s %d", ans, *activation_value);
-	printk(resp);
-    strncpy(msg_buffer, resp, MSG_BUFFER_LEN);
+	write_msg(ans);
+
+	printk(ans);
 
 	if (*activation_value == 1) {
 
@@ -440,7 +448,7 @@ int write_to_file(in *node, char *data) {
 	return ret_;
 }
 
-int read_from_file(in *node, char *data) {
+char * read_from_file(in *node) {
 	struct file *res = file_open("/home/rtmy/me", O_RDWR, 0);
 	int ret_ = 0;
 	int i;
@@ -470,7 +478,7 @@ int read_from_file(in *node, char *data) {
 	printk("read %d bytes \n", ret_);
 	printk("content: %s \n", buf);
 
-	return ret_;
+	return buf;
 }
 
 // int remove_inode(node) {
@@ -502,6 +510,7 @@ int read_from_file(in *node, char *data) {
 // }
 
 static ssize_t device_write(struct file *flip, const char *buffer, size_t len, loff_t *offset) {
+	printk("during write");
 	int i;
 	int ret_;
 
@@ -578,11 +587,12 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		printk("read %s", path);
 		in *node = get_inode(path);
 
-		char *data;
-
 		printk("have inode %p", node);
 
-		read_from_file(node, data);
+		char *data = read_from_file(node);
+		write_msg(data);
+		//printk("READED %s\n", *data);
+		//printk("sss");
 
 	}
 
