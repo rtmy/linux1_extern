@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 
     while(1) {
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
-	int fp = open("/dev/module", O_RDONLY);
+	int fp = open("/dev/module", O_RDWR);
 
 	off_t off = lseek(fp, 0, SEEK_SET);
 	ssize_t len = read(fp, str, sizeof str);
