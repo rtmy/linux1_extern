@@ -112,11 +112,7 @@ void file_close(struct file *file) {
 }
 
 int file_read(struct file *file, unsigned long long offset, void *data, unsigned int size) {
-	int ret;
-
-	ret = kernel_read(file, data, size, &offset);
-
-	return ret;
+	return kernel_read(file, data, size, &offset);
 }
 
 int file_write(struct file *file, unsigned long long offset, void *data, unsigned int size) {
@@ -166,9 +162,8 @@ int get_bitmap(int offset, int bitmap_size, int pos) {
 
 int acquire_free_block(in *node) {
 	// TODO: search closer to node blocks 
-	int i;
+	int ret_, i;
 	int block = -10;
-	int ret_;
 	for (i = 0; i < BLOCK_MAP_SIZE; i++) {
 		if (!(get_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, i))) {
 			block = i;	
@@ -194,11 +189,10 @@ int acquire_free_block(in *node) {
 }
 
 void free_blocks(in *node) {
+	int b, ret_, i;
+
 	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 
-	int b;
-	int ret_;
-	int i;
 	for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++) {
 			b = node->data[i];
 			unset_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, b);
@@ -302,14 +296,13 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 	// TODO: (cd) ignore everything, return inode
 	// TODO: (mkdir) or (touch) depending on command, create different inode types
 
-	int ret_;
+	int ret_, i;
 	in *node;
 	if (!(strchr(path+sizeof(char), '/'))) {
 		char * filename = path;
 
 		int block_pointer = 0x00;
 		int ic = sb->inode_counter;
-		int i;
 
 		for (i = 0; (i < BLOCK_LIST_SIZE) && (root->data[i] != 0x00); i++) {
 			block_pointer = root->data[i];
@@ -374,9 +367,8 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 }
 
 in * create_inode(char *filename, int ic, struct file *ret) {
-	// TODO: use inode map
-
 	int ret_;
+
 	in node = {
 		.data = { 0 },
 		.inode_id = ic,
@@ -395,10 +387,8 @@ in * create_inode(char *filename, int ic, struct file *ret) {
 
 int write_to_file(in *node, char *data) {
 	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
-	int ret_ = 0;
-	int i;
+	int i, s, ret_ = 0;
 	int b = node->data[0];
-	int s;
 
 	for (s = 0; (s < BLOCK_LIST_SIZE) && (node->data[s] != 0x00); s++) {
 			;;
@@ -418,10 +408,7 @@ int write_to_file(in *node, char *data) {
 
 char * read_from_file(in *node) {
 	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
-	int ret_ = 0;
-	int i;
-	int j;
-	int b;
+	int i, j, b, ret_ = 0;
 
 	for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++) {
 			;;
@@ -471,8 +458,7 @@ char * read_from_file(in *node) {
 // }
 
 static ssize_t device_write(struct file *flip, const char *buffer, size_t len, loff_t *offset) {
-	int i;
-	int ret_;
+	int ret_, i;
 
 	for (i = 0; (i < len) && (i < BUF_LEN); i++) {
 		get_user(Message[i], buffer + i);
