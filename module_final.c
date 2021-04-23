@@ -252,7 +252,7 @@ void write_msg(char* msg) {
 in * get_inode(char *path) {
 	int ret_;
 
-	struct file *ret = file_open("/home/rtmy/me", O_RDWR, 0);
+	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 
 	int *activation_value = kmalloc(sizeof(int), GFP_KERNEL);
 	ret_ = file_read(ret, 0, activation_value, sizeof(int));
@@ -395,7 +395,7 @@ in * create_inode(char *filename, int ic, struct file *ret) {
 }
 
 int write_to_file(in *node, char *data) {
-	struct file *res = file_open("/home/rtmy/me", O_RDWR, 0);
+	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 	int ret_ = 0;
 	int i;
 	int b = node->data[0];
@@ -417,7 +417,7 @@ int write_to_file(in *node, char *data) {
 }
 
 char * read_from_file(in *node) {
-	struct file *res = file_open("/home/rtmy/me", O_RDWR, 0);
+	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 	int ret_ = 0;
 	int i;
 	int j;
