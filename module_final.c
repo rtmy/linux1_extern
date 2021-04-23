@@ -340,6 +340,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 
 					// TODO: to a distinct fn
 					++sb->inode_counter;
+					printk("new sb %d", sb->inode_counter);
 					ret_ = file_write(ret, sizeof(int), sb, sizeof(superblock_t));
 					
 					return node;
@@ -348,7 +349,6 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
 						ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
 						printk("read node %d", ret_);
-						printk("Foudn file %s", node->filename);
 						if (!(strcmp(filename, node->filename))) {
 							printk("File exists, returning\n");
 							return node;
@@ -358,11 +358,13 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					// if mkdir, node->is_directory = 1
 					node = create_inode(filename, ic, ret);
 					dir_list[i] = node->inode_id;
+					printk("dl %d", node->inode_id);
 
 					ret_ = file_write(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
 
 					// TODO: to a distinct fn
 					++sb->inode_counter;
+					printk("new sb %d", sb->inode_counter);
 					ret_ = file_write(ret, sizeof(int), sb, sizeof(superblock_t));
 
 					return node; 
@@ -400,10 +402,11 @@ in * create_inode(char *filename, int ic, struct file *ret) {
 	};
 
 	in *node_ptr = kmalloc(sizeof(in), GFP_KERNEL);
-	memcpy(&node, node_ptr, sizeof(in));
+	memcpy(node_ptr, &node, sizeof(in));
 
 	strcpy(node.filename, filename);
 	ret_ = file_write(ret, (ic)*sizeof(in)+INODE_OFFSET, &node, sizeof(in));
+
 	return node_ptr;
 }
 
