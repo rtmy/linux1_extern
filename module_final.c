@@ -469,6 +469,7 @@ char * read_from_file(in *node) {
 
 static ssize_t device_write(struct file *flip, const char *buffer, size_t len, loff_t *offset) {
 	int ret_, i;
+	in *node;
 
 	for (i = 0; (i < len) && (i < BUF_LEN); i++) {
 		get_user(Message[i], buffer + i);
@@ -489,7 +490,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		char am = Message[i+1];
 
-		in *node = get_inode(path);
+		node = get_inode(path);
 
 	} else if (Message[0] == '>') {
 
@@ -506,7 +507,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		char am = Message[i+1];
 
-		in *node = get_inode(path);
+		node = get_inode(path);
 		// TODO: check if exists
 
 		char *data = kmalloc(BUF_LEN, GFP_KERNEL);
@@ -536,7 +537,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			m = Message[i];
 		}
 
-		in *node = get_inode(path);
+		node = get_inode(path);
 
 		char *data = read_from_file(node);
 		write_msg(data);
