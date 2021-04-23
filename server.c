@@ -30,20 +30,45 @@ int main(int argc, char *argv[]) {
 
     listen(listenfd, 10);
 
-    char str[1000];
-
-
     while(1) {
-        connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
-	int fp = open("/dev/module", O_RDWR);
+	ssize_t len;
+	char *strccc = malloc(10 * sizeof(char));
 
-	off_t off = lseek(fp, 0, SEEK_SET);
-	ssize_t len = read(fp, str, sizeof str);
-	str[len]=0;
+	fprintf(stderr, "reading from socket\n");
+
+        connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
+	len = read(connfd, strccc, sizeof(strccc));
+
+	fprintf(stderr, "read from socket %d %s\n", len, strccc);
+	fprintf(stderr, "length %d\n", len);
+
+	fprintf(stderr, "writing to char device\n");
+
+	int fp = open("/dev/module", O_WRONLY | O_CREAT | O_APPEND);
+	len = write(fp, strccc, 10);
 	close(fp);
 
-        snprintf(sendBuff, len*sizeof(char), "%s", str);
-        write(connfd, sendBuff, strlen(sendBuff));
+	fprintf(stderr, "wrote to char device %d %s\n", len, strccc);
+
+	fprintf(stderr, "reading from char device\n");
+
+	int fpr = open("/dev/module", O_RDONLY);
+	off_t off = lseek(fp, 0, SEEK_SET);
+
+	char *read_str = malloc(1025);
+
+	len = read(fpr, read_str, 1025);
+	//read_str[len] = 0;
+	close(fpr);
+
+	fprintf(stderr, "read from char_device %d %s\n", len, read_str);
+
+	fprintf(stderr, "writing to socket %s\n", read_str);
+
+        snprintf(sendBuff, strlen(read_str)*sizeof(char), "%s", read_str);
+        len = write(connfd, sendBuff, strlen(sendBuff));
+
+	fprintf(stderr, "wrote to socket %d %s\n", strlen(sendBuff), sendBuff);
 
         close(connfd);
         sleep(1);

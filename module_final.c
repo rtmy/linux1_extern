@@ -505,8 +505,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		get_user(Message[i], buffer + i);
 	}
 	
-	printk("%c --\n", Message[1]);
-
 	if (Message[0] == 'a') {
 		printk("touch");
 		printk("opening %d", get_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0));
@@ -573,6 +571,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			m = Message[i];
 		}
 
+		printk("read %s", path);
 		in *node = get_inode(path);
 
 		char *data;

@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
     char recvBuff[1024];
     struct sockaddr_in serv_addr;
 
-    if(argc != 2) {
+    if(argc < 2) {
         printf("\n Usage: %s <ip of server> \n",argv[0]);
         return 1;
     }
@@ -43,8 +43,15 @@ int main(int argc, char *argv[]) {
        return 1;
     }
 
+    n = write(sockfd, argv[2], sizeof(argv[2]));
+    printf("\n Wrote: %d \n", n);
+
+
+    //if(n < 0)
+
     while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
     {
+	printf("read %d %s\n", n, recvBuff);
         recvBuff[n] = 0;
         if(fputs(recvBuff, stdout) == EOF)
         {
