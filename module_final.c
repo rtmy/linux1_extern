@@ -18,8 +18,8 @@ MODULE_VERSION("0.01");
 
 #define DEVICE_NAME "minifs_device"
 #define MSG "Loaded minifs and minifs char device\n"
-#define MSG_BUFFER_LEN 100
-#define BUF_LEN 100
+#define MSG_BUFFER_LEN 20000
+#define BUF_LEN 20000
 
 #define FILESIZE 100
 #define BLOCK_LIST_SIZE 434
@@ -417,8 +417,10 @@ int write_to_file(in *node, char *data) {
 	for (s = 0; (s < BLOCK_LIST_SIZE) && (node->data[s] != 0x00); s++) {
 			;;
 	}
+	printk("ss %d", s);
 	for (i = 0; (i < strlen(data)*sizeof(char)); i+=BLOCKSIZE) {
-		if (i >= s) {
+		if (i/BLOCKSIZE >= s) {
+			printk("ack new %d %d", i, s);
 			b = acquire_free_block(node);
 		}
 		ret_ += file_write(res, BLOCK_OFFSET+((short) b)*BLOCKSIZE, data+i, BLOCKSIZE);
@@ -551,6 +553,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		}
 
 		printk("payload %s", data);
+		printk("len %d", strlen(data));
 		printk("target %p", node);
 
 		ret_ = write_to_file(node, data);
