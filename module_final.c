@@ -130,23 +130,21 @@ int file_write(struct file *file, unsigned long long offset, void *data, unsigne
 }
 
 int * read_bitmap(int offset, int bitmap_size) {
-	int ret_;
-
 	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 
 	int * bitmap = kmalloc(bitmap_size, GFP_KERNEL);
-	ret_ = file_read(res, offset, bitmap, bitmap_size);
+	file_read(res, offset, bitmap, bitmap_size);
+
+	file_close(res);
 
 	return bitmap;
 }
 
 void write_bitmap(int offset, int bitmap_size, int *bitmap) {
-	int ret_;
-
 	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
-	ret_ = file_write(res, offset, bitmap, bitmap_size);
+	file_write(res, offset, bitmap, bitmap_size);
 
-	int * bm = read_bitmap(offset, bitmap_size);
+	file_close(res);
 }
 
 void set_bitmap(int offset, int bitmap_size, int pos) {
@@ -188,6 +186,7 @@ int acquire_free_block(in *node) {
 
 		struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 		ret_ = file_write(ret, (node->inode_id)*sizeof(in)+INODE_OFFSET, node, sizeof(in));
+		file_close(ret);
 
 		return block;
 	}
@@ -208,6 +207,7 @@ void free_blocks(in *node) {
 	}
 
 	ret_ = file_write(ret, (node->inode_id)*sizeof(in)+INODE_OFFSET, node, sizeof(in));
+	file_close(ret);
 }
 
 static ssize_t device_read(struct file *filp, char *buffer, size_t len, loff_t *offset) {
@@ -224,7 +224,6 @@ static ssize_t device_read(struct file *filp, char *buffer, size_t len, loff_t *
 	}
 
 	return bytes_read;
-
 }
 
 static int device_open(struct inode *inode, struct file *file) {
@@ -295,7 +294,7 @@ in * get_inode(char *path) {
 		return &root;
 	}
 
-	// file_close(ret);
+	file_close(ret);
 	return 0;
 }
 
@@ -413,6 +412,7 @@ int write_to_file(in *node, char *data) {
 
 	printk("wrote %d bytes\n", ret_);
 
+	file_close(res);
 	return ret_;
 }
 
@@ -436,6 +436,8 @@ char * read_from_file(in *node) {
 
 	printk("read %d bytes \n", ret_);
 	printk("content: %s \n", buf);
+
+	file_close(res);
 
 	return buf;
 }
