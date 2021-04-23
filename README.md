@@ -8,6 +8,7 @@
 * rm, cd, ls, cp, mv, mkdir, cat, touch
 
 ## TODO server
+* config from argv
 * command translation
 
 ## TODO module
