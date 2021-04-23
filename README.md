@@ -14,3 +14,4 @@
 ## TODO module
 * rm
 * nested dirs
+* df -ah
