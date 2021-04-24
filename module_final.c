@@ -341,7 +341,8 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 
 	int ret_, i;
 	in *node;
-	if (!(strchr(path+sizeof(char), '/'))) {
+	char * slash_pos = strchr(path+sizeof(char), '/');
+	if (!(slash_pos)) {
 		char * filename = path;
 
 		int block_pointer = 0x00;
@@ -349,9 +350,6 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 
 		for (i = 0; (i < BLOCK_LIST_SIZE) && (root->data[i] != 0x00); i++)
 			block_pointer = root->data[i];
-		
-		//if (block_pointer == 0x00) {
-			// its either root dir or empty file
 
 			if (root->is_directory) {
 				short *dir_list = (short*) safe_alloc(BLOCKSIZE);
@@ -359,7 +357,6 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					return NULL;
 				ret_ = file_read(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
 
-				// if dir_list empty:
 				if (dir_list[0] == 0x00) {
 					node = create_inode(filename, ic, ret);
 					if (node == NULL) 
@@ -407,14 +404,47 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 				// TODO: (cat) logic for file reading
 			}
 
-		//} else {
-			// TODO: depending on command, may be >>
-		//}
+	} else {
+		// index first slash in path
+		int index = (int)(slash_pos - path);
+
+		// everything down the slash
+		char *new_path = path+(index*sizeof(char));
+
+		// everything before the slash
+		char *before_path = (char*) safe_alloc(index);
+		strlcpy(before_path, path, index);
+
+		short *dir_list = safe_alloc(DIR_LIST_SIZE);
+		dir_list = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
+
+		int found = 0;
+		in *node;
+		for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
+			ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
+			if (!(strcmp(before_path, node->filename))) {
+				found = 1;
+				break;
+			}
+		}
+
+		if (found) {
+			return get_inode_rec(node, new_path);
+		} else {
+			struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
+			superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
+			if (sb == NULL)
+				return NULL;
+			ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
+			int ic = sb->inode_counter;
+			new_node = create_inode(before_path, ic, ret);
+			file_close(ret);
+			dir_list[i] = new_node;
+			ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
+			return get_inode_rec(new_node, new_path);
+		}
+
 	}
-	
-	// path = in, rest
-	// while rest:
-	//  get_inode_rec(rest)
 	return 0x00;
 }
 
@@ -483,33 +513,61 @@ char * read_from_file(in *node) {
 	return buf;
 }
 
-// int remove_inode(node) {
-// 	unset_bitmap(inode_bitmap, node->inode_id);
+int remove_inode(node, parent) {
+	if (unset_bitmap(node->inode_id))
+		return NULL;
 
-// 	parent_node = get_inode(parent);
-// 	// look for inode_id in parent_node -> data -> dir_list
-// 	// set to zero
-// 	// write parent_node
+	in *node_buf;
+	int found = 0;
 
-// }
+	short *dir_list = safe_alloc(DIR_LIST_SIZE);
+	dir_list = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
 
-// int remove_file(f) {
-// 	inode = get_inode(f);
-// 	free_blocks(node);
+	for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
+		ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node_buf, sizeof(in));
+		if (!(strcmp(filename, node_buf->filename))) {
+			found = 1;
+			break;
+		}
+	}
 
-// }
+	// if (node_buf == NULL)
+		// return NULL;
 
-// int copy_file(old, new) {
-// 	i_old = get_inode(old);
-// 	content = read_from_file(old);
-// 	get_inode(new);
-// 	write_to_file(content);
-// }
+	if (found) {
+		dir_list[i] = 0x00;
+		ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
+	}
+	
+	return 0;
+}
 
-// int move_file(old, new) {
-// 	copy_file(old, new);
+int remove_file(char *path) {
+	char *parent_path = get_parent_path(path);
 
-// }
+	in *parent_node = get_inode(parent_path);
+	in *node = get_inode(path);
+	remove_inode(node, parent_node)
+	free_blocks(node);
+
+	return 0;
+}
+
+int copy_file(char *old_path, char *new_path) {
+	in *i_old = get_inode(old_path);
+	char *content = read_from_file(i_old);
+	in *i_new = get_inode(new_path);
+	write_to_file(i_new, content);
+
+	return 0;
+}
+
+int move_file(char *old_path, char *new_path) {
+	copy_file(old_path, new_path);
+	remove_file(old_path);
+
+	return 0;
+}
 
 static ssize_t device_write(struct file *flip, const char *buffer, size_t len, loff_t *offset) {
 	int ret_, i;
