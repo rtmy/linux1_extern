@@ -525,6 +525,7 @@ int remove_inode(in *node, in *parent) {
 	int i, ret_, found = 0;
 
 	short *dir_list = safe_alloc(DIR_LIST_SIZE);
+	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 	dir_list = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
 
 	for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
@@ -543,11 +544,18 @@ int remove_inode(in *node, in *parent) {
 		ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
 	}
 	
+	file_close(ret);
 	return 0;
 }
 
 int remove_file(char *path) {
-	char *parent_path = get_parent_path(path);
+	char * slash_pos = strchr(path, '/');
+	if ((strlen(path) == 1) && slash_pos)
+		return -1;
+
+	int index = (int)(slash_pos - path);
+	char *parent_path = (char*) safe_alloc(index);
+	strlcpy(parent_path, path, index);
 
 	in *parent_node = get_inode(parent_path);
 	in *node = get_inode(path);
