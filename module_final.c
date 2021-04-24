@@ -604,8 +604,9 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		char am = Message[i+1];
 
-		if (!(get_inode(path)))
-			return -1;
+		get_inode(path);
+		// if (!(get_inode(path)))
+			// return -1;
 
 	} else if (Message[0] == '>') {
 
@@ -623,12 +624,12 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		char am = Message[i+1];
 
 		node = get_inode(path);
-		if (!(node))
-			return -1;
+		// if (!(node))
+		// 	return -1;
 
 		char *data = (char*) safe_alloc(BUF_LEN);
-		if (data == NULL)
-			return -1;
+		// if (data == NULL)
+			// return -1;
 
 		int j = 0;
 
@@ -656,12 +657,11 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		}
 
 		node = get_inode(path);
-		if (!(node))
-			return -1;
+		// if (!(node))
+			// return -1;
 
 		char *data = read_from_file(node);
-		if (write_msg(data))
-			return -1;
+		write_msg(data);
 		// kfree(data);
 	}
 
