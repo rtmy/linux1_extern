@@ -138,6 +138,8 @@ int * read_bitmap(int offset, int bitmap_size) {
 	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 
 	int * bitmap = (int*) safe_alloc(bitmap_size);
+	if (bitmap == NULL)
+		return NULL;
 	file_read(res, offset, bitmap, bitmap_size);
 
 	file_close(res);
@@ -152,24 +154,31 @@ void write_bitmap(int offset, int bitmap_size, int *bitmap) {
 	file_close(res);
 }
 
-void set_bitmap(int offset, int bitmap_size, int pos) {
+int set_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
+	if (bitmap == NULL)
+		return -1;
 	set_bit(bitmap, pos);
 	write_bitmap(offset, bitmap_size, bitmap);
 	kfree(bitmap);
 }
 
-void unset_bitmap(int offset, int bitmap_size, int pos) {
+int unset_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
+	if (bitmap == NULL)
+		return -1;
 	unset_bit(bitmap, pos);
 	write_bitmap(offset, bitmap_size, bitmap);
 	kfree(bitmap);
+	return 0;
 }
 
 int get_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
-	return get_bit(bitmap, pos);
+	if (bitmap == NULL)
+		return -1;
 	kfree(bitmap);
+	return get_bit(bitmap, pos);
 }
 
 int acquire_free_block(in *node) {
@@ -177,18 +186,21 @@ int acquire_free_block(in *node) {
 	int ret_, i;
 	int block = -10;
 	for (i = 0; i < BLOCK_MAP_SIZE; i++) {
-		if (!(get_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, i))) {
+		int bit = get_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, i);
+		if (bit == -1)
+			return -1;
+		if (!(bit)) {
 			block = i;	
 			break;
 		}
 	}
 
 	if (block > 0) {
-		set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, block);
+		if (set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, block))
+			return -1;
 
-		for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++) {
+		for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++)
 			;;
-		}
 		node->data[i] = block;
 
 		struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
@@ -200,14 +212,15 @@ int acquire_free_block(in *node) {
 	return -1;
 }
 
-void free_blocks(in *node) {
+int free_blocks(in *node) {
 	int b, ret_, i;
 
 	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 
 	for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++) {
 			b = node->data[i];
-			unset_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, b);
+			if (unset_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, b) == -1)
+				return -1;
 
 			node->data[i] = 0x00;
 	}
@@ -248,11 +261,14 @@ static int device_release(struct inode *inode, struct file *file) {
 	return 0;
 }
 
-void write_msg(char* msg) {
+int write_msg(char* msg) {
 	char * resp = (char*) safe_alloc(MSG_BUFFER_LEN);
+	if (resp == NULL)
+		return -1;
 	snprintf(resp, strlen(msg)+1, "%s", msg);
 	strncpy(msg_buffer, resp, MSG_BUFFER_LEN);
 	kfree(resp);
+	return 0;
 }
 
 in * get_inode(char *path) {
@@ -261,21 +277,30 @@ in * get_inode(char *path) {
 	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 
 	int *activation_value = (int*) safe_alloc(sizeof(int));
+	if (activation_value == NULL)
+		return -1;
 	ret_ = file_read(ret, 0, activation_value, sizeof(int));
 
 	char ans[] = "Formatted";
-	write_msg(ans);
+	if (write_msg(ans))
+		return NULL;
 
 	if (*activation_value == 1) {
 
 		superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
+		if (sb == NULL)
+			return NULL;
 		ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
 		in *root_node = (in*) safe_alloc(sizeof(int));
+		if (root_node == NULL)
+			return NULL;
 		ret_ = file_read(ret, INODE_OFFSET, root_node, sizeof(in));
 		if (!(strcmp(path, "/")) || strlen(path) == 1) {
 			return root_node;
 		} else {
 			in *node = get_inode_rec(root_node, sb, ret, path+sizeof(char));
+			if (node == NULL)
+				return NULL;
 			return node;
 		}
 
@@ -301,7 +326,8 @@ in * get_inode(char *path) {
 		short dir_list[DIR_LIST_SIZE] = { 0x00 };
 		ret_ = file_write(ret, BLOCK_OFFSET, &dir_list, sizeof(dir_list));
 
-		set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0);
+		if (set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0))
+			return NULL;
 		return &root;
 	}
 
@@ -321,20 +347,23 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 		int block_pointer = 0x00;
 		int ic = sb->inode_counter;
 
-		for (i = 0; (i < BLOCK_LIST_SIZE) && (root->data[i] != 0x00); i++) {
+		for (i = 0; (i < BLOCK_LIST_SIZE) && (root->data[i] != 0x00); i++)
 			block_pointer = root->data[i];
-		}
 		
 		//if (block_pointer == 0x00) {
 			// its either root dir or empty file
 
 			if (root->is_directory) {
 				short *dir_list = (short*) safe_alloc(BLOCKSIZE);
+				if (dir_list == NULL)
+					return NULL;
 				ret_ = file_read(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
 
 				// if dir_list empty:
 				if (dir_list[0] == 0x00) {
 					node = create_inode(filename, ic, ret);
+					if (node == NULL) 
+						return NULL;
 
 					dir_list[0] = ic;
 					ret_ = file_write(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
@@ -346,6 +375,8 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					return node;
 				} else {
 					in *node = (in*) safe_alloc(sizeof(in));
+					if (sb == NULL)
+						return NULL;
 					for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
 						ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
 						if (!(strcmp(filename, node->filename))) {
@@ -356,6 +387,8 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 
 					// if mkdir, node->is_directory = 1
 					node = create_inode(filename, ic, ret);
+					if (node == NULL)
+						return NULL;
 					dir_list[i] = node->inode_id;
 
 					ret_ = file_write(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
@@ -396,9 +429,11 @@ in * create_inode(char *filename, int ic, struct file *ret) {
 	};
 
 	in *node_ptr = (in*) safe_alloc(sizeof(in));
+	if (sb == NULL)
+		return NULL;
 	memcpy(node_ptr, &node, sizeof(in));
 
-	strcpy(node.filename, filename);
+	strlcpy(node.filename, filename, strlen(filename));
 	ret_ = file_write(ret, (ic)*sizeof(in)+INODE_OFFSET, &node, sizeof(in));
 
 	return node_ptr;
@@ -409,9 +444,8 @@ int write_to_file(in *node, char *data) {
 	int i, s, ret_ = 0;
 	int b = node->data[0];
 
-	for (s = 0; (s < BLOCK_LIST_SIZE) && (node->data[s] != 0x00); s++) {
+	for (s = 0; (s < BLOCK_LIST_SIZE) && (node->data[s] != 0x00); s++)
 			;;
-	}
 	for (i = 0; (i < strlen(data)*sizeof(char)); i+=BLOCKSIZE) {
 		if (i/BLOCKSIZE >= s) {
 			b = acquire_free_block(node);
@@ -429,11 +463,12 @@ char * read_from_file(in *node) {
 	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 	int i, j, b, ret_ = 0;
 
-	for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++) {
+	for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++)
 			;;
-	}
 
 	char *buf = (char*) safe_alloc(BLOCKSIZE*i);
+	if (buf == NULL)
+		return -1;
 
 	for (j = 0; j < i; j+=1) {
 		b = node->data[j];
@@ -480,9 +515,8 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 	int ret_, i;
 	in *node;
 
-	for (i = 0; (i < len) && (i < BUF_LEN); i++) {
+	for (i = 0; (i < len) && (i < BUF_LEN); i++)
 		get_user(Message[i], buffer + i);
-	}
 	
 	if (Message[0] == 'a') {
 		printk("touch");
@@ -499,7 +533,8 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		char am = Message[i+1];
 
-		node = get_inode(path);
+		if (!(get_inode(path)))
+			return -1;
 
 	} else if (Message[0] == '>') {
 
@@ -517,9 +552,12 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		char am = Message[i+1];
 
 		node = get_inode(path);
-		// TODO: check if exists
+		if (!(node))
+			return -1;
 
 		char *data = (char*) safe_alloc(BUF_LEN);
+		if (sb == NULL)
+			return -1;
 
 		int j = 0;
 
@@ -547,9 +585,12 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		}
 
 		node = get_inode(path);
+		if (!(node))
+			return -1;
 
 		char *data = read_from_file(node);
-		write_msg(data);
+		if (write_msg(data))
+			return -1;
 		kfree(data);
 	}
 
