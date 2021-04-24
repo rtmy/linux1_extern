@@ -161,6 +161,7 @@ int set_bitmap(int offset, int bitmap_size, int pos) {
 	set_bit(bitmap, pos);
 	write_bitmap(offset, bitmap_size, bitmap);
 	kfree(bitmap);
+	return 0;
 }
 
 int unset_bitmap(int offset, int bitmap_size, int pos) {
@@ -227,6 +228,7 @@ int free_blocks(in *node) {
 
 	ret_ = file_write(ret, (node->inode_id)*sizeof(in)+INODE_OFFSET, node, sizeof(in));
 	file_close(ret);
+	return 0;
 }
 
 static ssize_t device_read(struct file *filp, char *buffer, size_t len, loff_t *offset) {
@@ -409,7 +411,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 		int index = (int)(slash_pos - path);
 
 		// everything down the slash
-		char *new_path = path+(index*sizeof(char));
+		char *new_path = (char*) path+(index*sizeof(char));
 
 		// everything before the slash
 		char *before_path = (char*) safe_alloc(index);
@@ -428,20 +430,22 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 			}
 		}
 
+		struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
+		superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
+		if (sb == NULL)
+			return NULL;
+
 		if (found) {
-			return get_inode_rec(node, new_path);
+			file_close(ret);
+			return get_inode_rec(node, sb, ret, new_path);
 		} else {
-			struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
-			superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
-			if (sb == NULL)
-				return NULL;
 			ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
 			int ic = sb->inode_counter;
-			new_node = create_inode(before_path, ic, ret);
-			file_close(ret);
+			in *new_node = create_inode(before_path, ic, ret);
 			dir_list[i] = new_node;
 			ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
-			return get_inode_rec(new_node, new_path);
+			file_close(ret);
+			return get_inode_rec(new_node, sb, ret, new_path);
 		}
 
 	}
@@ -459,7 +463,7 @@ in * create_inode(char *filename, int ic, struct file *ret) {
 	};
 
 	in *node_ptr = (in*) safe_alloc(sizeof(in));
-	if (sb == NULL)
+	if (node_ptr == NULL)
 		return NULL;
 	memcpy(node_ptr, &node, sizeof(in));
 
@@ -513,19 +517,19 @@ char * read_from_file(in *node) {
 	return buf;
 }
 
-int remove_inode(node, parent) {
-	if (unset_bitmap(node->inode_id))
-		return NULL;
+int remove_inode(in *node, in *parent) {
+	if (unset_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, node->inode_id) == -1)
+		return -1;
 
 	in *node_buf;
-	int found = 0;
+	int i, ret_, found = 0;
 
 	short *dir_list = safe_alloc(DIR_LIST_SIZE);
 	dir_list = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
 
 	for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
 		ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node_buf, sizeof(in));
-		if (!(strcmp(filename, node_buf->filename))) {
+		if (!(strcmp(node->filename, node_buf->filename))) {
 			found = 1;
 			break;
 		}
@@ -547,7 +551,7 @@ int remove_file(char *path) {
 
 	in *parent_node = get_inode(parent_path);
 	in *node = get_inode(path);
-	remove_inode(node, parent_node)
+	remove_inode(node, parent_node);
 	free_blocks(node);
 
 	return 0;
@@ -614,7 +618,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			return -1;
 
 		char *data = (char*) safe_alloc(BUF_LEN);
-		if (sb == NULL)
+		if (data == NULL)
 			return -1;
 
 		int j = 0;
