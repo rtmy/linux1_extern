@@ -10,13 +10,35 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#define COMMAND_LEN 10
+#define PATH_LEN 25
+#define BUF_LEN 1000
+
+
+int translate(char *strccc) {
+	char* command = (char*) malloc(sizeof(char)*COMMAND_LEN-1);
+	char* path = (char*) malloc(sizeof(char)*PATH_LEN-1);
+	char* buf = (char*) malloc(sizeof(char)*BUF_LEN);
+
+	return sscanf(strccc, "%s %s %s", command, path, buf);
+}
+
 
 int main(int argc, char *argv[]) {
+    if(argc < 1) {
+        printf("Usage: %s <port>\n", argv[0]);
+        return 1;
+    }
+
+    int port;
+    if (!(sscanf(argv[1], "%d", &port))) {
+        printf("Invalid port\n");
+    }
+
     int listenfd = 0, connfd = 0;
     struct sockaddr_in serv_addr;
 
-    char sendBuff[1025];
-    time_t ticks;
+    char sendBuff[COMMAND_LEN + PATH_LEN + BUF_LEN];
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -24,28 +46,34 @@ int main(int argc, char *argv[]) {
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(5000);
+    serv_addr.sin_port = htons(port);
 
     bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
     listen(listenfd, 10);
 
     while(1) {
+    	int ret;
 		ssize_t len;
-		char *strccc = malloc(10 * sizeof(char));
+		char *strccc = malloc(BUF_LEN * sizeof(char));
 
 		fprintf(stderr, "reading from socket\n");
 
-	        connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
+        connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
 		len = read(connfd, strccc, sizeof(strccc));
 
 		fprintf(stderr, "read from socket %d %s\n", len, strccc);
 		fprintf(stderr, "length %d\n", len);
 
+		if ((ret = translate(strccc))) {
+			printf("Error during translation\n");
+			return ret;
+		}
+
 		fprintf(stderr, "writing to char device\n");
 
 		int fp = open("/dev/module", O_WRONLY | O_CREAT | O_APPEND);
-		len = write(fp, strccc, 10);
+		len = write(fp, strccc, BUF_LEN);
 		close(fp);
 
 		fprintf(stderr, "wrote to char device %d %s\n", len, strccc);
@@ -55,9 +83,9 @@ int main(int argc, char *argv[]) {
 		int fpr = open("/dev/module", O_RDONLY);
 		off_t off = lseek(fp, 0, SEEK_SET);
 
-		char *read_str = malloc(1025);
+		char *read_str = malloc(COMMAND_LEN + PATH_LEN + BUF_LEN);
 
-		len = read(fpr, read_str, 1025);
+		len = read(fpr, read_str, COMMAND_LEN + PATH_LEN + BUF_LEN);
 		//read_str[len] = 0;
 		close(fpr);
 

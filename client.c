@@ -64,9 +64,8 @@ int talk(char *message, char *ip, int port) {
 
 int main(int argc, char *argv[]) {
 
-    char *program_name = argv[0];
     if(argc < 3) {
-        printf("Usage: %s <ip of server> <port>\n", program_name);
+        printf("Usage: %s <ip of server> <port>\n", argv[0]);
         return 1;
     }
 
@@ -80,19 +79,15 @@ int main(int argc, char *argv[]) {
     int ret;
     printf("Intro\n");
 
-    // if (!(fopen(title, "r")))
-    //     return 1;
-
     printf("enter \'help\' to see all available commands\n");
     printf("> ");
     ret = scanf("%s", command);
 
-
     while (strcmp(command, "exit") && (ret != EOF)) {
         if (strstr(command, "touch")) {
             printf("called touch\n");
-            if (!(ret = talk(command, ip, port))) {
-                printf("ok!\n");
+            if (ret = talk(command, ip, port)) {
+                printf("Error during talk\n");
             }
         }
         else if (strstr(command, "rm")) {
@@ -109,6 +104,7 @@ int main(int argc, char *argv[]) {
         ret = scanf("%s", command);
     }
 
+    free(command);
 }
 
 
