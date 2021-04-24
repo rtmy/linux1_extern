@@ -142,7 +142,7 @@ int * read_bitmap(int offset, int bitmap_size) {
 		return NULL;
 	file_read(res, offset, bitmap, bitmap_size);
 
-	file_close(res);
+	// file_close(res);
 
 	return bitmap;
 }
@@ -151,7 +151,7 @@ void write_bitmap(int offset, int bitmap_size, int *bitmap) {
 	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 	file_write(res, offset, bitmap, bitmap_size);
 
-	file_close(res);
+	// file_close(res);
 }
 
 int set_bitmap(int offset, int bitmap_size, int pos) {
@@ -160,7 +160,7 @@ int set_bitmap(int offset, int bitmap_size, int pos) {
 		return -1;
 	set_bit(bitmap, pos);
 	write_bitmap(offset, bitmap_size, bitmap);
-	kfree(bitmap);
+	// kfree(bitmap);
 	return 0;
 }
 
@@ -170,7 +170,7 @@ int unset_bitmap(int offset, int bitmap_size, int pos) {
 		return -1;
 	unset_bit(bitmap, pos);
 	write_bitmap(offset, bitmap_size, bitmap);
-	kfree(bitmap);
+	// kfree(bitmap);
 	return 0;
 }
 
@@ -178,7 +178,7 @@ int get_bitmap(int offset, int bitmap_size, int pos) {
 	int *bitmap = read_bitmap(offset, bitmap_size);
 	if (bitmap == NULL)
 		return -1;
-	kfree(bitmap);
+	// kfree(bitmap);
 	return get_bit(bitmap, pos);
 }
 
@@ -206,7 +206,7 @@ int acquire_free_block(in *node) {
 
 		struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 		ret_ = file_write(ret, (node->inode_id)*sizeof(in)+INODE_OFFSET, node, sizeof(in));
-		file_close(ret);
+		// file_close(ret);
 
 		return block;
 	}
@@ -227,7 +227,7 @@ int free_blocks(in *node) {
 	}
 
 	ret_ = file_write(ret, (node->inode_id)*sizeof(in)+INODE_OFFSET, node, sizeof(in));
-	file_close(ret);
+	// file_close(ret);
 	return 0;
 }
 
@@ -269,7 +269,7 @@ int write_msg(char* msg) {
 		return -1;
 	snprintf(resp, strlen(msg)+1, "%s", msg);
 	strncpy(msg_buffer, resp, MSG_BUFFER_LEN);
-	kfree(resp);
+	// kfree(resp);
 	return 0;
 }
 
@@ -306,9 +306,9 @@ in * get_inode(char *path) {
 			return node;
 		}
 
-		kfree(activation_value);
-		kfree(sb);
-		kfree(root_node);
+		// kfree(activation_value);
+		// kfree(sb);
+		// kfree(root_node);
 
 	} else {
 		int activation_byte = 1;
@@ -333,7 +333,7 @@ in * get_inode(char *path) {
 		return &root;
 	}
 
-	file_close(ret);
+	// file_close(ret);
 	return 0;
 }
 
@@ -396,7 +396,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					++sb->inode_counter;
 					ret_ = file_write(ret, sizeof(int), sb, sizeof(superblock_t));
 
-					kfree(dir_list);
+					// kfree(dir_list);
 
 					return node; 
 				}
@@ -436,7 +436,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 			return NULL;
 
 		if (found) {
-			file_close(ret);
+			// file_close(ret);
 			return get_inode_rec(node, sb, ret, new_path);
 		} else {
 			ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
@@ -444,7 +444,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 			in *new_node = create_inode(before_path, ic, ret);
 			dir_list[i] = new_node;
 			ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
-			file_close(ret);
+			// file_close(ret);
 			return get_inode_rec(new_node, sb, ret, new_path);
 		}
 
@@ -489,7 +489,7 @@ int write_to_file(in *node, char *data) {
 
 	printk("wrote %d bytes\n", ret_);
 
-	file_close(res);
+	// file_close(res);
 	return ret_;
 }
 
@@ -512,7 +512,7 @@ char * read_from_file(in *node) {
 	printk("read %d bytes \n", ret_);
 	printk("content: %s \n", buf);
 
-	file_close(res);
+	// file_close(res);
 
 	return buf;
 }
@@ -544,7 +544,7 @@ int remove_inode(in *node, in *parent) {
 		ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
 	}
 	
-	file_close(ret);
+	// file_close(ret);
 	return 0;
 }
 
@@ -640,7 +640,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		ret_ = write_to_file(node, data);
 
-		kfree(data);
+		// kfree(data);
 
 	} else if (Message[0] == 'c') {
 		// todo function of parsing touch message
@@ -661,7 +661,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		char *data = read_from_file(node);
 		if (write_msg(data))
 			return -1;
-		kfree(data);
+		// kfree(data);
 	}
 
 	// cat -> return data
@@ -675,7 +675,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 	Message_Ptr = Message;
 
-	kfree(node);
+	// kfree(node);
 
 	return i;
 }
