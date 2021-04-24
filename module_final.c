@@ -89,6 +89,16 @@ static char *Message_Ptr;
 int *inode_bitmap;
 int *block_bitmap;
 
+void * safe_alloc(int space) {
+	void *ret;
+	ret = kmalloc(space, GFP_KERNEL);
+	if (ret == NULL) {
+		printk("UNSAFE ALLOC");
+		// TODO: unload module?
+	}
+	return ret;
+}
+
 struct file *file_open(const char *path, int flags, int rights) {
 	struct file *filp = NULL;
 	int err = 0;
@@ -127,7 +137,7 @@ int file_write(struct file *file, unsigned long long offset, void *data, unsigne
 int * read_bitmap(int offset, int bitmap_size) {
 	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 
-	int * bitmap = (int*) kmalloc(bitmap_size, GFP_KERNEL);
+	int * bitmap = (int*) safe_alloc(bitmap_size);
 	file_read(res, offset, bitmap, bitmap_size);
 
 	file_close(res);
@@ -239,7 +249,7 @@ static int device_release(struct inode *inode, struct file *file) {
 }
 
 void write_msg(char* msg) {
-	char * resp = (char*) kmalloc(MSG_BUFFER_LEN, GFP_KERNEL);
+	char * resp = (char*) safe_alloc(MSG_BUFFER_LEN);
 	snprintf(resp, strlen(msg)+1, "%s", msg);
 	strncpy(msg_buffer, resp, MSG_BUFFER_LEN);
 	kfree(resp);
@@ -250,7 +260,7 @@ in * get_inode(char *path) {
 
 	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 
-	int *activation_value = (int*) kmalloc(sizeof(int), GFP_KERNEL);
+	int *activation_value = (int*) safe_alloc(sizeof(int));
 	ret_ = file_read(ret, 0, activation_value, sizeof(int));
 
 	char ans[] = "Formatted";
@@ -258,9 +268,9 @@ in * get_inode(char *path) {
 
 	if (*activation_value == 1) {
 
-		superblock_t *sb = (superblock_t*) kmalloc(sizeof(superblock_t), GFP_KERNEL);
+		superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
 		ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
-		in *root_node = (in*) kmalloc(sizeof(in), GFP_KERNEL);
+		in *root_node = (in*) safe_alloc(sizeof(int));
 		ret_ = file_read(ret, INODE_OFFSET, root_node, sizeof(in));
 		if (!(strcmp(path, "/")) || strlen(path) == 1) {
 			return root_node;
@@ -319,7 +329,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 			// its either root dir or empty file
 
 			if (root->is_directory) {
-				short *dir_list = (short*) kmalloc(BLOCKSIZE, GFP_KERNEL);
+				short *dir_list = (short*) safe_alloc(BLOCKSIZE);
 				ret_ = file_read(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
 
 				// if dir_list empty:
@@ -335,7 +345,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					
 					return node;
 				} else {
-					in *node = (in*) kmalloc(sizeof(in), GFP_KERNEL);
+					in *node = (in*) safe_alloc(sizeof(in));
 					for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
 						ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
 						if (!(strcmp(filename, node->filename))) {
@@ -385,7 +395,7 @@ in * create_inode(char *filename, int ic, struct file *ret) {
 		.is_directory = (char) 1
 	};
 
-	in *node_ptr = (in*) kmalloc(sizeof(in), GFP_KERNEL);
+	in *node_ptr = (in*) safe_alloc(sizeof(in));
 	memcpy(node_ptr, &node, sizeof(in));
 
 	strcpy(node.filename, filename);
@@ -423,7 +433,7 @@ char * read_from_file(in *node) {
 			;;
 	}
 
-	char *buf = (char*) kmalloc(BLOCKSIZE*i, GFP_KERNEL);
+	char *buf = (char*) safe_alloc(BLOCKSIZE*i);
 
 	for (j = 0; j < i; j+=1) {
 		b = node->data[j];
@@ -509,7 +519,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		node = get_inode(path);
 		// TODO: check if exists
 
-		char *data = (char*) kmalloc(BUF_LEN, GFP_KERNEL);
+		char *data = (char*) safe_alloc(BUF_LEN);
 
 		int j = 0;
 
