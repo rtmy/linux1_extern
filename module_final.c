@@ -280,7 +280,7 @@ in * get_inode(char *path) {
 
 	int *activation_value = (int*) safe_alloc(sizeof(int));
 	if (activation_value == NULL)
-		return -1;
+		return 0;
 	ret_ = file_read(ret, 0, activation_value, sizeof(int));
 
 	char ans[] = "Formatted";
@@ -350,8 +350,9 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 		int block_pointer = 0x00;
 		int ic = sb->inode_counter;
 
-		for (i = 0; (i < BLOCK_LIST_SIZE) && (root->data[i] != 0x00); i++)
+		for (i = 0; (i < BLOCK_LIST_SIZE) && (root->data[i] != 0x00); i++) {
 			block_pointer = root->data[i];
+		}
 
 			if (root->is_directory) {
 				short *dir_list = (short*) safe_alloc(BLOCKSIZE);
@@ -418,7 +419,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 		strlcpy(before_path, path, index);
 
 		short *dir_list = safe_alloc(DIR_LIST_SIZE);
-		dir_list = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
+		int ret_ = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
 
 		int found = 0;
 		in *node;
@@ -442,7 +443,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 			ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
 			int ic = sb->inode_counter;
 			in *new_node = create_inode(before_path, ic, ret);
-			dir_list[i] = new_node;
+			dir_list[i] = new_node->inode_id;
 			ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
 			file_close(ret);
 			return get_inode_rec(new_node, sb, ret, new_path);
@@ -502,7 +503,7 @@ char * read_from_file(in *node) {
 
 	char *buf = (char*) safe_alloc(BLOCKSIZE*i);
 	if (buf == NULL)
-		return -1;
+		return NULL;
 
 	for (j = 0; j < i; j+=1) {
 		b = node->data[j];
@@ -526,7 +527,7 @@ int remove_inode(in *node, in *parent) {
 
 	short *dir_list = safe_alloc(DIR_LIST_SIZE);
 	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
-	dir_list = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
+	ret_ = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
 
 	for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
 		ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node_buf, sizeof(in));
