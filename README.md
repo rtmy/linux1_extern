@@ -1,20 +1,31 @@
 # linux1_extern
 
-## TODO project
-* makefile update
+## Build
+`set module_final.c FILESYSTEM const to where the fs should be`  
+`make`
 
-## TODO client
-* shell
-* rm, cd, ls, cp, mv, mkdir, cat, touch
+## Usage
+### startup
+`make test`, get nod number, then  
+`sudo mknod /dev/module c <nod number> 0`  
+`insmod module_final.ko`  
+`./server <port>`  
+`./client <ip addr> <port>`  
 
-## TODO server
-* config from argv
-* command translation
+### format
+`dd if=/dev/zero of=<filepath> bs=1M count=32`  
+`any command in client`
+
+## Details
+Filename is contained in inode.
 
 ## TODO module
 * rm
 * nested dirs
-* df -ah
 
-## TODO refactoring
-* kmalloc cast 
+## TODO project
+* makefile update
+
+## TODO
+* format tool
+* free space determinator, df -ah
