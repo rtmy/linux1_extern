@@ -525,7 +525,7 @@ int remove_inode(in *node, in *parent) {
 	int i, ret_, found = 0;
 
 	short *dir_list = safe_alloc(DIR_LIST_SIZE);
-	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
+	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 	dir_list = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
 
 	for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
