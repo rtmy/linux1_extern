@@ -15,3 +15,6 @@
 * rm
 * nested dirs
 * df -ah
+
+## TODO refactoring
+* kmalloc cast 
