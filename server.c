@@ -21,8 +21,6 @@ int translate(char *strccc) {
 	char* path = (char*) malloc(sizeof(char)*PATH_LEN-1);
 	char* buf = (char*) malloc(sizeof(char)*BUF_LEN);
 
-	// char *fgets(char *str, int n, FILE *stream)
-
 	int ret = sscanf(strccc, "%s %s %s", command, path, buf);
 	if (ret > 0) {
 		fprintf(stderr, "got %s %s %s\n", command, path, buf);
@@ -68,7 +66,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "reading from socket\n");
 
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
-		len = read(connfd, strccc, sizeof(strccc));
+		len = read(connfd, strccc, sizeof(char)*BUF_LEN);
 
 		fprintf(stderr, "read from socket %d %s\n", len, strccc);
 		fprintf(stderr, "length %d\n", len);

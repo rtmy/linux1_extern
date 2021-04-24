@@ -78,17 +78,18 @@ int main(int argc, char *argv[]) {
     }
 
     char *command = (char*) malloc(sizeof(char) * BUF_LEN);
-    int ret;
+    char *ret;
+    int ret_;
     printf("Intro\n");
 
     printf("enter \'help\' to see all available commands\n");
     printf("> ");
     ret = fgets(command, BUF_LEN, stdin);
 
-    while (strcmp(command, "exit") && (ret != EOF)) {
+    while (strcmp(command, "exit") && (ret != NULL)) {
         if (strstr(command, "touch")) {
             printf("called touch\n");
-            if ((ret = talk(command, ip, port))) {
+            if ((ret_ = talk(command, ip, port))) {
                 printf("Error during talk\n");
             }
         }
@@ -123,7 +124,7 @@ int main(int argc, char *argv[]) {
         }
 
         printf("> ");
-        ret = scanf("%s", command);
+        ret = fgets(command, BUF_LEN, stdin);
     }
 
     free(command);
