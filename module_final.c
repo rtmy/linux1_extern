@@ -279,62 +279,62 @@ in * get_inode(char *path) {
 	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 
 	int *activation_value = (int*) safe_alloc(sizeof(int));
-	if (activation_value == NULL)
-		return 0;
-	ret_ = file_read(ret, 0, activation_value, sizeof(int));
+	// if (activation_value == NULL)
+	// 	return 0;
+	// ret_ = file_read(ret, 0, activation_value, sizeof(int));
 
-	char ans[] = "Formatted";
-	if (write_msg(ans))
-		return NULL;
+	// char ans[] = "Formatted";
+	// if (write_msg(ans))
+	// 	return NULL;
 
-	if (*activation_value == 1) {
+	// if (*activation_value == 1) {
 
-		superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
-		if (sb == NULL)
-			return NULL;
-		ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
-		in *root_node = (in*) safe_alloc(sizeof(int));
-		if (root_node == NULL)
-			return NULL;
-		ret_ = file_read(ret, INODE_OFFSET, root_node, sizeof(in));
-		if (!(strcmp(path, "/")) || strlen(path) == 1) {
-			return root_node;
-		} else {
-			in *node = get_inode_rec(root_node, sb, ret, path+sizeof(char));
-			if (node == NULL)
-				return NULL;
-			return node;
-		}
+	// 	superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
+	// 	if (sb == NULL)
+	// 		return NULL;
+	// 	ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
+	// 	in *root_node = (in*) safe_alloc(sizeof(int));
+	// 	if (root_node == NULL)
+	// 		return NULL;
+	// 	ret_ = file_read(ret, INODE_OFFSET, root_node, sizeof(in));
+	// 	if (!(strcmp(path, "/")) || strlen(path) == 1) {
+	// 		return root_node;
+	// 	} else {
+	// 		in *node = get_inode_rec(root_node, sb, ret, path+sizeof(char));
+	// 		if (node == NULL)
+	// 			return NULL;
+	// 		return node;
+	// 	}
 
-		// kfree(activation_value);
-		// kfree(sb);
-		// kfree(root_node);
+	// 	// kfree(activation_value);
+	// 	// kfree(sb);
+	// 	// kfree(root_node);
 
-	} else {
-		int activation_byte = 1;
-		ret_ = file_write(ret, 0, &activation_byte, sizeof(int));
-		superblock_t sb = {
-		       .inode_counter = 1
-		};
-		ret_ = file_write(ret, sizeof(int), &sb, sizeof(superblock_t));
-		in root = {
-			.filename = "/",
-			.is_directory = (char) 1,
-			.data = { 0 },
-			.inode_id = 1
-		};
-		ret_ = file_write(ret, INODE_OFFSET, &root, sizeof(in));
+	// } else {
+	// 	int activation_byte = 1;
+	// 	ret_ = file_write(ret, 0, &activation_byte, sizeof(int));
+	// 	superblock_t sb = {
+	// 	       .inode_counter = 1
+	// 	};
+	// 	ret_ = file_write(ret, sizeof(int), &sb, sizeof(superblock_t));
+	// 	in root = {
+	// 		.filename = "/",
+	// 		.is_directory = (char) 1,
+	// 		.data = { 0 },
+	// 		.inode_id = 1
+	// 	};
+	// 	ret_ = file_write(ret, INODE_OFFSET, &root, sizeof(in));
 
-		short dir_list[DIR_LIST_SIZE] = { 0x00 };
-		ret_ = file_write(ret, BLOCK_OFFSET, &dir_list, sizeof(dir_list));
+	// 	short dir_list[DIR_LIST_SIZE] = { 0x00 };
+	// 	ret_ = file_write(ret, BLOCK_OFFSET, &dir_list, sizeof(dir_list));
 
-		if (set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0))
-			return NULL;
-		return &root;
-	}
+	// 	if (set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0))
+	// 		return NULL;
+	// 	return &root;
+	// }
 
-	// file_close(ret);
-	return 0;
+	// // file_close(ret);
+	// return 0;
 }
 
 in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
@@ -607,63 +607,63 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		get_inode(path);
 		// if (!(get_inode(path)))
 			// return -1;
-
-	} else if (Message[0] == '>') {
-
-		// TODO: function of parsing touch message
-		char m = Message[2];
-		char path[100] = { 0x00 };
-		i = 2;
-
-		while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
-			path[i-2] = m;
-			++i;
-			m = Message[i];
-		}
-
-		char am = Message[i+1];
-
-		node = get_inode(path);
-		// if (!(node))
-		// 	return -1;
-
-		char *data = (char*) safe_alloc(BUF_LEN);
-		// if (data == NULL)
-			// return -1;
-
-		int j = 0;
-
-		++i;
-		while ((Message[i] != 0) && (i < BUF_LEN)) {
-			data[j] = Message[i];
-			++i;
-			++j;
-		}
-
-		ret_ = write_to_file(node, data);
-
-		// kfree(data);
-
-	} else if (Message[0] == 'c') {
-		// todo function of parsing touch message
-		char m = Message[2];
-		char path[100] = { 0x00 };
-		i = 2;
-
-		while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
-			path[i-2] = m;
-			++i;
-			m = Message[i];
-		}
-
-		node = get_inode(path);
-		// if (!(node))
-			// return -1;
-
-		char *data = read_from_file(node);
-		write_msg(data);
-		// kfree(data);
 	}
+	// } else if (Message[0] == '>') {
+
+	// 	// TODO: function of parsing touch message
+	// 	char m = Message[2];
+	// 	char path[100] = { 0x00 };
+	// 	i = 2;
+
+	// 	while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
+	// 		path[i-2] = m;
+	// 		++i;
+	// 		m = Message[i];
+	// 	}
+
+	// 	char am = Message[i+1];
+
+	// 	node = get_inode(path);
+	// 	// if (!(node))
+	// 	// 	return -1;
+
+	// 	char *data = (char*) safe_alloc(BUF_LEN);
+	// 	// if (data == NULL)
+	// 		// return -1;
+
+	// 	int j = 0;
+
+	// 	++i;
+	// 	while ((Message[i] != 0) && (i < BUF_LEN)) {
+	// 		data[j] = Message[i];
+	// 		++i;
+	// 		++j;
+	// 	}
+
+	// 	ret_ = write_to_file(node, data);
+
+	// 	// kfree(data);
+
+	// } else if (Message[0] == 'c') {
+	// 	// todo function of parsing touch message
+	// 	char m = Message[2];
+	// 	char path[100] = { 0x00 };
+	// 	i = 2;
+
+	// 	while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
+	// 		path[i-2] = m;
+	// 		++i;
+	// 		m = Message[i];
+	// 	}
+
+	// 	node = get_inode(path);
+	// 	// if (!(node))
+	// 		// return -1;
+
+	// 	char *data = read_from_file(node);
+	// 	write_msg(data);
+	// 	// kfree(data);
+	// }
 
 	// cat -> return data
 	// cd -> too, return dir_list
