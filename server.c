@@ -16,11 +16,19 @@
 
 
 int translate(char *strccc) {
+	fprintf(stderr, "translating %s\n", strccc);
 	char* command = (char*) malloc(sizeof(char)*COMMAND_LEN-1);
 	char* path = (char*) malloc(sizeof(char)*PATH_LEN-1);
 	char* buf = (char*) malloc(sizeof(char)*BUF_LEN);
 
-	return sscanf(strccc, "%s %s %s", command, path, buf);
+	// char *fgets(char *str, int n, FILE *stream)
+
+	int ret = sscanf(strccc, "%s %s %s", command, path, buf);
+	if (ret > 0) {
+		fprintf(stderr, "got %s %s %s\n", command, path, buf);
+		return 0;
+	}
+	return 1;
 }
 
 
@@ -67,7 +75,7 @@ int main(int argc, char *argv[]) {
 
 		if ((ret = translate(strccc))) {
 			printf("Error during translation\n");
-			return ret;
+			continue;
 		}
 
 		fprintf(stderr, "writing to char device\n");

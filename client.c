@@ -41,6 +41,8 @@ int talk(char *message, char *ip, int port) {
        return 1;
     }
 
+    printf("buff %s %d\n", message, strlen(message));
+
     n = write(sockfd, message, strlen(message)*sizeof(char));
 
     while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
@@ -81,18 +83,38 @@ int main(int argc, char *argv[]) {
 
     printf("enter \'help\' to see all available commands\n");
     printf("> ");
-    ret = scanf("%s", command);
+    ret = fgets(command, BUF_LEN, stdin);
 
     while (strcmp(command, "exit") && (ret != EOF)) {
         if (strstr(command, "touch")) {
             printf("called touch\n");
-            if (ret = talk(command, ip, port)) {
+            if ((ret = talk(command, ip, port))) {
                 printf("Error during talk\n");
             }
         }
+        else if (strstr(command, "cat")) {
+            printf("called cat\n");
+        }
+        else if (strstr(command, ">")) {
+            printf("called >\n");
+        }
         else if (strstr(command, "rm")) {
             printf("called rm\n");
-
+        }
+        else if (strstr(command, "cd")) {
+            printf("called cd\n");
+        }
+        else if (strstr(command, "ls")) {
+            printf("called ls\n");
+        }
+        else if (strstr(command, "cp")) {
+            printf("called cp\n");
+        }
+        else if (strstr(command, "mv")) {
+            printf("called mv\n");
+        }
+        else if (strstr(command, "mkdir")) {
+            printf("called mkdir\n");
         }
         else if(strstr(command, "help")) {
             printf("Commands:\n"
