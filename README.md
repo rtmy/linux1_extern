@@ -31,5 +31,5 @@
 `./client <ip addr> <port>`  
 
 ### format
-`dd if=/dev/zero of=<filepath> bs=1M count=32`  
+`./format.sh <filepath>`  
 `any command in client`
