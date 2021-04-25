@@ -1,5 +1,23 @@
 # linux1_extern
 
+* filename is contained in inode  
+* there is no cp -r  
+* mkdir works like mkdir -p  
+
+## TODO
+* add words to client
+* no writing if no file exists
+* no ls if no dir
+* makefile update
+* exception return to server mechanism 
+* free space determinator, df -ah
+
+## Known bugs
+* ls for empty dir -> gets Killed — check emptiness
+* ls for nested dirs -> gets Killed — confirm to call ls on parent
+* ls parent after rm — check residues during ls
+* removal of original data removes copy data -- check how its copied
+
 ## Build
 `set module_final.c FILESYSTEM const to where the fs should be`  
 `make`
@@ -15,17 +33,3 @@
 ### format
 `dd if=/dev/zero of=<filepath> bs=1M count=32`  
 `any command in client`
-
-## Details
-Filename is contained in inode.
-
-## TODO module
-* rm
-* nested dirs
-
-## TODO project
-* makefile update
-
-## TODO
-* format tool
-* free space determinator, df -ah
