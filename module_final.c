@@ -363,69 +363,68 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 			block_pointer = root->data[i];
 		}
 
-			if (root->is_directory) {
-				short *dir_list = (short*) safe_alloc(BLOCKSIZE);
-				ret_ = file_read(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
-				if (dir_list == NULL)
+		if (root->is_directory) {
+			short *dir_list = (short*) safe_alloc(BLOCKSIZE);
+			ret_ = file_read(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
+			if (dir_list == NULL)
+				return NULL;
+
+			if (dir_list[0] == 0x00) {
+				printk("nobody inside");
+				node = create_inode(filename, ic, ret);
+				if (node == NULL) 
 					return NULL;
 
-				if (dir_list[0] == 0x00) {
-					printk("nobody inside");
-					node = create_inode(filename, ic, ret);
-					if (node == NULL) 
-						return NULL;
+				dir_list[0] = ic;
+				ret_ = file_write(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
 
-					dir_list[0] = ic;
-					ret_ = file_write(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
-
-					// TODO: to a distinct fn
-					++sb->inode_counter;
-					ret_ = file_write(ret, sizeof(int), sb, sizeof(superblock_t));
-					
-					return node;
-				} else {
-					printk("folders inside\n");
-					in *node = (in*) safe_alloc(sizeof(in));
-					printk("avec %s\n", filename);
-					if (sb == NULL)
-						return NULL;
-					for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
-						ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
-						printk("looking at file %s whose len is %d\n", node->filename, strlen(node->filename));
-						if (!(strcmp(filename, node->filename))) {
-							printk("File exists, returning\n");
-							return node;
-						}
-					}
-
-					// if mkdir, node->is_directory = 1
-					
-					node = create_inode(filename, ic, ret);
-					printk("created %p\n", node);
-					printk("its id is %d\n", node->inode_id);
-					printk("its name is %s\n", node->filename);
-					if (node == NULL)
-						return NULL;
-					dir_list[i] = node->inode_id;
-
-					ret_ = file_write(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
-
-					// TODO: to a distinct fn
-					++sb->inode_counter;
-					ret_ = file_write(ret, sizeof(int), sb, sizeof(superblock_t));
-
-					// kfree(dir_list);
-
-					return node; 
-				}
+				// TODO: to a distinct fn
+				++sb->inode_counter;
+				ret_ = file_write(ret, sizeof(int), sb, sizeof(superblock_t));
+				
+				return node;
 			} else {
-				return root;
-				// printk("is it dir? %p %s", root->is_directory, root->filename);
-				// TODO: (cat) logic for file reading
-			}
+				printk("folders inside\n");
+				in *node = (in*) safe_alloc(sizeof(in));
+				printk("avec %s\n", filename);
+				if (sb == NULL)
+					return NULL;
+				for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
+					ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
+					printk("looking at file %s whose len is %d\n", node->filename, strlen(node->filename));
+					if (!(strcmp(filename, node->filename))) {
+						printk("File exists, returning\n");
+						return node;
+					}
+				}
+
+				// if mkdir, node->is_directory = 1
+				
+				node = create_inode(filename, ic, ret);
+				printk("created %p\n", node);
+				printk("its id is %d\n", node->inode_id);
+				printk("its name is %s\n", node->filename);
+				if (node == NULL)
+					return NULL;
+				dir_list[i] = node->inode_id;
+
+				ret_ = file_write(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
+
+				// TODO: to a distinct fn
+				++sb->inode_counter;
+				ret_ = file_write(ret, sizeof(int), sb, sizeof(superblock_t));
+
+				// kfree(dir_list);
+
+				return node; 
+			}	
+		} else {
+			return root;
+			// printk("is it dir? %p %s", root->is_directory, root->filename);
+			// TODO: (cat) logic for file reading
+		}
 
 	} else {
-		printk("slash pos");
 		// index first slash in path
 		int index = (int)(slash_pos - path);
 
@@ -434,10 +433,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 
 		// everything before the slash
 		char *before_path = (char*) safe_alloc(index);
-		printk("ix %d\n", index);
 		strlcpy(before_path, path, index+1);
-		printk("got bp %s\n", before_path);
-		printk("got np %s\n", new_path);
 
 		short *dir_list = safe_alloc(BLOCKSIZE);
 		int ret_ = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
@@ -458,11 +454,9 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 		ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
 
 		if (found) {
-			printk("found\n");
 		//	file_close(ret);
 			return get_inode_rec(node, sb, ret, new_path);
 		} else {
-			printk("ss))\n");
 			int ic = sb->inode_counter;
 			in *new_node = create_inode(before_path, ic, ret);
 			dir_list[i] = new_node->inode_id;
@@ -492,16 +486,11 @@ in * create_inode(char *filename, int ic, struct file *ret) {
 	memcpy(node_ptr, &node, sizeof(in));
 
 	ret_ = strncpy(node.filename, filename, strlen(filename));
-	printk("cpied %d\n", ret_);
 	ret_ = file_write(ret, (ic)*sizeof(in)+INODE_OFFSET, &node, sizeof(in));
-	printk("write to off cr %d %d\n", ic*sizeof(in)+INODE_OFFSET, ret_); 
 
 	// ---
 	in *node_buf = (in*) kmalloc(sizeof(in), GFP_KERNEL);
 	ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*ic, node_buf, sizeof(in));
-	printk("read!!\n");
-	printk("created %s", node.filename);
-	printk("created buf %s", node_buf->filename);
 
 	return node_buf;
 }
@@ -514,16 +503,11 @@ int write_to_file(in *node, char *data) {
 	for (s = 0; ((s < BLOCK_LIST_SIZE) && (node->data[s] != 0x00)); s++)
 			;;
 	for (i = 0; (i < strlen(data)*sizeof(char)); i+=BLOCKSIZE) {
-		printk("s %d i %d add %d\n", s, i, i/BLOCKSIZE);
 		if (i/BLOCKSIZE >= s) {
 			b = acquire_free_block(node);
 		}
-		printk("writing to %d\n", b);
-		printk("data writing to off %d\n", BLOCK_OFFSET+((short) b)*BLOCKSIZE);
 		ret_ += file_write(res, BLOCK_OFFSET+((short) b)*BLOCKSIZE, data+i, BLOCKSIZE);
 	}
-
-	printk("wrote %d bytes\n", ret_);
 
 	 file_close(res);
 	return ret_;
@@ -722,6 +706,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		char *data = read_from_file(node);
 		//write_msg(data);
 		// kfree(data);
+
 	} else if (Message[0] == 'r') {
 		char m = Message[2];
 		char path[100] = { 0x00 };
@@ -737,6 +722,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			// return -1;
 
 		char *data = remove_file(path);
+
 	} else if (Message[0] == 'p') {
 		char m = Message[2];
 		char path1[100] = { '\0' };
@@ -751,25 +737,40 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		++i;
 		m = Message[i];
-		printk("its %c\n", m);
 		
 		sscanf(Message+i, "%s", path2);
-		printk("!!%s\n", Message+i);
 		
 		// if (!(node))
 			// return -1;
 
-		printk("from %s to %s, %d %d\n", path1, path2, strlen(path1), strlen(path2));
 		copy_file(path1, path2);
+
+	} else if (Message[0] == 'v') {
+		char m = Message[2];
+		char path1[100] = { '\0' };
+		char path2[100] = { '\0' };
+		i = 2;
+
+		while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
+			path1[i-2] = m;
+			++i;
+			m = Message[i];
+		}
+
+		++i;
+		m = Message[i];
+		
+		sscanf(Message+i, "%s", path2);
+		
+		// if (!(node))
+			// return -1;
+
+		move_file(path1, path2);
 	}
 
-	// cat -> return data
-	// cd -> too, return dir_list
-	// touch -> simply enter
+	// cd -> check if path exists and return it
+	// ls -> too, return dir_list
 	// mkdir -> too, with dir
-	// rm -> rm
-	// cp -> copy inode, copy blocks (instructions)
-	// mv -> too, with previous removal
 	// cp from fs to local -> touch
 
 	Message_Ptr = Message;
