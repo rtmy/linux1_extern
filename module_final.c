@@ -287,54 +287,54 @@ in * get_inode(char *path) {
 	// if (write_msg(ans))
 	// 	return NULL;
 
-	// if (*activation_value == 1) {
+	 if (*activation_value == 1) {
 
-	// 	superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
+	 	superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
 	// 	if (sb == NULL)
 	// 		return NULL;
-	// 	ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
-	// 	in *root_node = (in*) safe_alloc(sizeof(int));
+	 	ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
+	 	in *root_node = (in*) safe_alloc(sizeof(in));
 	// 	if (root_node == NULL)
 	// 		return NULL;
-	// 	ret_ = file_read(ret, INODE_OFFSET, root_node, sizeof(in));
-	// 	if (!(strcmp(path, "/")) || strlen(path) == 1) {
-	// 		return root_node;
-	// 	} else {
-	// 		in *node = get_inode_rec(root_node, sb, ret, path+sizeof(char));
-	// 		if (node == NULL)
-	// 			return NULL;
-	// 		return node;
-	// 	}
+	 	ret_ = file_read(ret, INODE_OFFSET, root_node, sizeof(in));
+ 	if (!(strcmp(path, "/")) || strlen(path) == 1) {
+ 		return root_node;
+ 	} else {
+ 		in *node = get_inode_rec(root_node, sb, ret, path+sizeof(char));
+ 		if (node == NULL)
+ 			return NULL;
+ 		return node;
+ 	}
 
 	// 	// kfree(activation_value);
 	// 	// kfree(sb);
 	// 	// kfree(root_node);
 
-	// } else {
-	// 	int activation_byte = 1;
-	// 	ret_ = file_write(ret, 0, &activation_byte, sizeof(int));
-	// 	superblock_t sb = {
-	// 	       .inode_counter = 1
-	// 	};
-	// 	ret_ = file_write(ret, sizeof(int), &sb, sizeof(superblock_t));
-	// 	in root = {
-	// 		.filename = "/",
-	// 		.is_directory = (char) 1,
-	// 		.data = { 0 },
-	// 		.inode_id = 1
-	// 	};
-	// 	ret_ = file_write(ret, INODE_OFFSET, &root, sizeof(in));
+	 } else {
+	 	int activation_byte = 1;
+	 	ret_ = file_write(ret, 0, &activation_byte, sizeof(int));
+	 	superblock_t sb = {
+	 	       .inode_counter = 1
+	 	};
+	 	ret_ = file_write(ret, sizeof(int), &sb, sizeof(superblock_t));
+	 	in root = {
+	 		.filename = "/",
+	 		.is_directory = (char) 1,
+	 		.data = { 0 },
+	 		.inode_id = 1
+	 	};
+	 	ret_ = file_write(ret, INODE_OFFSET, &root, sizeof(in));
 
-	// 	short dir_list[DIR_LIST_SIZE] = { 0x00 };
-	// 	ret_ = file_write(ret, BLOCK_OFFSET, &dir_list, sizeof(dir_list));
+ 	short dir_list[DIR_LIST_SIZE] = { 0x00 };
+ 	ret_ = file_write(ret, BLOCK_OFFSET, &dir_list, sizeof(dir_list));
 
-	// 	if (set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0))
-	// 		return NULL;
-	// 	return &root;
-	// }
+	 	if (set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0))
+	 		return NULL;
+	 	return &root;
+	 }
 
 	// // file_close(ret);
-	// return 0;
+	 return 0;
 }
 
 in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
