@@ -766,12 +766,47 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			// return -1;
 
 		move_file(path1, path2);
+	} else if (Message[0] == 'd') {
+		// if getnode exists
+		// return node
+
+	} else if (Message[0] == 's') {
+		struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
+
+		char m = Message[2];
+		char path[100] = { 0x00 };
+		i = 2;
+
+		while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
+			path[i-2] = m;
+			++i;
+			m = Message[i];
+		}
+
+		in *node = get_inode(path);
+
+		short *dir_list = (short*) safe_alloc(BLOCKSIZE);
+		ret_ = file_read(res, BLOCK_OFFSET+node->data[0]*BLOCKSIZE, dir_list, BLOCKSIZE);
+		// if (!(node))
+			// return -1;
+
+		node = (in*) safe_alloc(sizeof(in));
+		for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
+			ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
+			printk("%s\n", node->filename);
+			printk("File exists, returning\n");
+		}
+
+		file_close(res);
+
+	} else if (Message[0] == 'i') {
+		// get_inode(path, dir=true)
+		// mkdir -> too, with dir
+
+	} else if (Message[0] == 'o') {
+		// call touch
 	}
 
-	// cd -> check if path exists and return it
-	// ls -> too, return dir_list
-	// mkdir -> too, with dir
-	// cp from fs to local -> touch
 
 	Message_Ptr = Message;
 
