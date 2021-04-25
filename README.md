@@ -1,7 +1,6 @@
 # linux1_extern
 
 * filename is contained in inode  
-* there is no cp -r  
 * mkdir works like mkdir -p  
 
 ## TODO
@@ -9,8 +8,9 @@
 * no writing if no file exists
 * no ls if no dir
 * makefile update
-* exception return to server mechanism 
+* mechanism for exception return to server  
 * free space determinator, df -ah
+* cp -r 
 
 ## Known bugs
 * ls for empty dir -> gets Killed — check emptiness
