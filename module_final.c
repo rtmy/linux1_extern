@@ -281,7 +281,7 @@ in * get_inode(char *path) {
 	int *activation_value = (int*) safe_alloc(sizeof(int));
 	// if (activation_value == NULL)
 	// 	return 0;
-	// ret_ = file_read(ret, 0, activation_value, sizeof(int));
+	ret_ = file_read(ret, 0, activation_value, sizeof(int));
 
 	// char ans[] = "Formatted";
 	// if (write_msg(ans))
@@ -607,42 +607,42 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		get_inode(path);
 		// if (!(get_inode(path)))
 			// return -1;
-	}
-	// } else if (Message[0] == '>') {
+	} else if (Message[0] == '>') {
 
-	// 	// TODO: function of parsing touch message
-	// 	char m = Message[2];
-	// 	char path[100] = { 0x00 };
-	// 	i = 2;
+		// TODO: function of parsing touch message
+		char m = Message[2];
+		char path[100] = { 0x00 };
+		i = 2;
 
-	// 	while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
-	// 		path[i-2] = m;
-	// 		++i;
-	// 		m = Message[i];
-	// 	}
+		while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
+			path[i-2] = m;
+			++i;
+			m = Message[i];
+		}
 
-	// 	char am = Message[i+1];
+		char am = Message[i+1];
 
-	// 	node = get_inode(path);
-	// 	// if (!(node))
-	// 	// 	return -1;
+		node = get_inode(path);
+		// if (!(node))
+		// 	return -1;
 
-	// 	char *data = (char*) safe_alloc(BUF_LEN);
-	// 	// if (data == NULL)
-	// 		// return -1;
+		char *data = (char*) safe_alloc(BUF_LEN);
+		// if (data == NULL)
+			// return -1;
 
-	// 	int j = 0;
+		int j = 0;
 
-	// 	++i;
-	// 	while ((Message[i] != 0) && (i < BUF_LEN)) {
-	// 		data[j] = Message[i];
-	// 		++i;
-	// 		++j;
-	// 	}
+		++i;
+		while ((Message[i] != 0) && (i < BUF_LEN)) {
+			data[j] = Message[i];
+			++i;
+			++j;
+		}
 
-	// 	ret_ = write_to_file(node, data);
+		ret_ = write_to_file(node, data);
 
 	// 	// kfree(data);
+	}
 
 	// } else if (Message[0] == 'c') {
 	// 	// todo function of parsing touch message
