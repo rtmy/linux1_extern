@@ -67,6 +67,8 @@ typedef struct superblock {
 	int inode_counter;
 } superblock_t;
 
+
+in * get_inode(char *, bool, bool);
 in * get_inode_rec(in *, superblock_t *, struct file *, char *, bool);
 in * create_inode(char *, int, struct file *, bool);
 
@@ -280,7 +282,7 @@ int write_msg(char* msg) {
 	return 0;
 }
 
-in * get_inode(char *path, bool is_directory) {
+in * get_inode(char *path, bool is_directory, bool create) {
 	int ret_;
 
 	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
@@ -308,7 +310,7 @@ in * get_inode(char *path, bool is_directory) {
  		return root_node;
  	} else {
 		printk("going 1 %s", path+sizeof(char));
- 		in *node = get_inode_rec(root_node, sb, ret, path+sizeof(char));
+ 		in *node = get_inode_rec(root_node, sb, ret, path+sizeof(char), is_directory, create);
  		if (node == NULL)
  			return NULL;
  		return node;
@@ -345,9 +347,7 @@ in * get_inode(char *path, bool is_directory) {
 	 return 0;
 }
 
-in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, bool is_directory) {
-	// TODO: (cd) ignore everything, return inode
-	// TODO: (mkdir) or (touch) depending on command, create different inode types
+in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, bool is_directory, bool create) {
 
 	int ret_, i;
 	in *node;
@@ -397,6 +397,9 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, boo
 						return node;
 					}
 				}
+
+				if (!(create))
+					return NULL;
 
 				// if mkdir, node->is_directory = 1
 				
@@ -455,14 +458,19 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, boo
 
 		if (found) {
 		//	file_close(ret);
-			return get_inode_rec(node, sb, ret, new_path, is_directory);
+			return get_inode_rec(node, sb, ret, new_path, is_directory, create);
 		} else {
-			int ic = sb->inode_counter;
-			in *new_node = create_inode(before_path, ic, ret);
-			dir_list[i] = new_node->inode_id;
-			ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
-		//	 file_close(ret);
-			return get_inode_rec(new_node, sb, ret, new_path, is_directory);
+			if (create) {
+				int ic = sb->inode_counter;
+				in *new_node = create_inode(before_path, ic, ret);
+				dir_list[i] = new_node->inode_id;
+				ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
+			 	// file_close(ret);
+				return get_inode_rec(new_node, sb, ret, new_path, is_directory, create);	
+			} else {
+				return NULL;
+			}
+
 		}
 
 	}
@@ -573,7 +581,7 @@ int remove_inode(in *node, in *parent) {
 	return 0;
 }
 
-int remove_file(char *path) {
+int remove_file(char *path, bool is_directory) {
 	printk("removing %s\n", path);
 	char *slash_pos = strchr(path, '/');
 	if ((strlen(path) == 1) && slash_pos)
@@ -592,7 +600,8 @@ int remove_file(char *path) {
 
 	in *parent_node = get_inode(parent_path, 1, 0);
 	printk("pn %p\n", parent_node);
-	in *node = get_inode(path);
+
+	in *node = get_inode(path, is_directory, 0);
 	printk("n %p\n", node);
 	free_blocks(node);
 	remove_inode(node, parent_node);
@@ -601,9 +610,9 @@ int remove_file(char *path) {
 }
 
 int copy_file(char *old_path, char *new_path) {
-	in *i_old = get_inode(old_path);
+	in *i_old = get_inode(old_path, 0, 0);
 	printk("old %p\n", i_old);
-	in *i_new = get_inode(new_path);
+	in *i_new = get_inode(new_path, 0, 1);
 	char *content = read_from_file(i_old);
 	printk("cp %p\n", content);
 	if (content && strlen(content))
@@ -627,7 +636,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		get_user(Message[i], buffer + i);
 	
 	if (Message[0] == 'a') {
-		printk("touch");
+		// touch
 
 		char m = Message[2];
 		char path[100] = { 0x00 };
@@ -642,10 +651,11 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		char am = Message[i+1];
 		printk("p %s", path);
 
-		get_inode(path);
+		get_inode(path, 0, 1);
 		// if (!(get_inode(path)))
 			// return -1;
 	} else if (Message[0] == '>') {
+		// >
 
 		// TODO: function of parsing touch message
 		char m = Message[2];
@@ -660,7 +670,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		char am = Message[i+1];
 
-		node = get_inode(path);
+		node = get_inode(path, 0, 1);
 		// if (!(node))
 		// 	return -1;
 
@@ -681,14 +691,11 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		ret_ = write_to_file(node, data);
 
-		// debug
-		node = get_inode(path);
-		printk("after write filename %s\n", node->filename);
-
 	// 	// kfree(data);
 
 	} else if (Message[0] == 'c') {
-		// todo function of parsing touch message
+		// cat
+
 		char m = Message[2];
 		char path[100] = { 0x00 };
 		i = 2;
@@ -699,7 +706,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			m = Message[i];
 		}
 
-		node = get_inode(path);
+		node = get_inode(path, 0, 0);
 		// if (!(node))
 			// return -1;
 
@@ -708,6 +715,8 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		// kfree(data);
 
 	} else if (Message[0] == 'r') {
+		// rm
+
 		char m = Message[2];
 		char path[100] = { 0x00 };
 		i = 2;
@@ -724,6 +733,8 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		char *data = remove_file(path);
 
 	} else if (Message[0] == 'p') {
+		// cp file
+
 		char m = Message[2];
 		char path1[100] = { '\0' };
 		char path2[100] = { '\0' };
@@ -746,6 +757,8 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		copy_file(path1, path2);
 
 	} else if (Message[0] == 'v') {
+		// mv
+
 		char m = Message[2];
 		char path1[100] = { '\0' };
 		char path2[100] = { '\0' };
@@ -767,10 +780,31 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		move_file(path1, path2);
 	} else if (Message[0] == 'd') {
-		// if getnode exists
-		// return node
+		// cd
+
+		char m = Message[2];
+		char path[100] = { 0x00 };
+		i = 2;
+
+		while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
+			path[i-2] = m;
+			++i;
+			m = Message[i];
+		}
+
+		node = get_inode(path, 1, 0);
+		if (!(node))
+			return -1;
+
+		printk(path);
+
+		// char *data = read_from_file(node);
+		//write_msg(data);
+		// kfree(data);
 
 	} else if (Message[0] == 's') {
+		// ls
+
 		struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 
 		char m = Message[2];
@@ -783,7 +817,11 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			m = Message[i];
 		}
 
-		in *node = get_inode(path);
+		in *node = get_inode(path, 0, 0);
+		if (node == NULL) {
+			file_close(res);
+			return -1;
+		}
 
 		short *dir_list = (short*) safe_alloc(BLOCKSIZE);
 		ret_ = file_read(res, BLOCK_OFFSET+node->data[0]*BLOCKSIZE, dir_list, BLOCKSIZE);
@@ -799,10 +837,25 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		file_close(res);
 
 	} else if (Message[0] == 'i') {
-		// get_inode(path, dir=true)
-		// mkdir -> too, with dir
+		// mkdir -p
+
+		char m = Message[2];
+		char path[100] = { 0x00 };
+		i = 2;
+
+		while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
+			path[i-2] = m;
+			++i;
+			m = Message[i];
+		}
+
+		char am = Message[i+1];
+		printk("p %s", path);
+
+		get_inode(path, 1, 1);
 
 	} else if (Message[0] == 'o') {
+		// scp
 		// call touch
 	}
 
