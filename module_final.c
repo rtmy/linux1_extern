@@ -138,11 +138,13 @@ int * read_bitmap(int offset, int bitmap_size) {
 	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 
 	int * bitmap = (int*) safe_alloc(bitmap_size);
+	file_read(res, offset, bitmap, bitmap_size);
+	printk("oooooo");
 	if (bitmap == NULL)
 		return NULL;
-	file_read(res, offset, bitmap, bitmap_size);
 
-	// file_close(res);
+	file_close(res);
+	printk("ggggggg");
 
 	return bitmap;
 }
@@ -151,7 +153,7 @@ void write_bitmap(int offset, int bitmap_size, int *bitmap) {
 	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 	file_write(res, offset, bitmap, bitmap_size);
 
-	// file_close(res);
+	file_close(res);
 }
 
 int set_bitmap(int offset, int bitmap_size, int pos) {
@@ -160,6 +162,7 @@ int set_bitmap(int offset, int bitmap_size, int pos) {
 		return -1;
 	set_bit(bitmap, pos);
 	write_bitmap(offset, bitmap_size, bitmap);
+	printk("set!");
 	// kfree(bitmap);
 	return 0;
 }
@@ -188,6 +191,7 @@ int acquire_free_block(in *node) {
 	int block = -10;
 	for (i = 0; i < BLOCK_MAP_SIZE; i++) {
 		int bit = get_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, i);
+		printk("%d bit is %d\n", i, bit);
 		if (bit == -1)
 			return -1;
 		if (!(bit)) {
@@ -195,10 +199,13 @@ int acquire_free_block(in *node) {
 			break;
 		}
 	}
+	printk("free now is %d\n", block);
 
 	if (block > 0) {
+		printk("in here");
 		if (set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, block))
 			return -1;
+		printk("wrote %d", get_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, block));
 
 		for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++)
 			;;
@@ -206,7 +213,7 @@ int acquire_free_block(in *node) {
 
 		struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 		ret_ = file_write(ret, (node->inode_id)*sizeof(in)+INODE_OFFSET, node, sizeof(in));
-		// file_close(ret);
+		file_close(ret);
 
 		return block;
 	}
@@ -300,6 +307,7 @@ in * get_inode(char *path) {
  	if (!(strcmp(path, "/")) || strlen(path) == 1) {
  		return root_node;
  	} else {
+		printk("going 1 %s", path+sizeof(char));
  		in *node = get_inode_rec(root_node, sb, ret, path+sizeof(char));
  		if (node == NULL)
  			return NULL;
@@ -333,7 +341,7 @@ in * get_inode(char *path) {
 	 	return &root;
 	 }
 
-	// // file_close(ret);
+	 file_close(ret);
 	 return 0;
 }
 
@@ -345,6 +353,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 	in *node;
 	char * slash_pos = strchr(path+sizeof(char), '/');
 	if (!(slash_pos)) {
+		printk(" no slash pos");
 		char * filename = path;
 
 		int block_pointer = 0x00;
@@ -356,11 +365,12 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 
 			if (root->is_directory) {
 				short *dir_list = (short*) safe_alloc(BLOCKSIZE);
+				ret_ = file_read(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
 				if (dir_list == NULL)
 					return NULL;
-				ret_ = file_read(ret, BLOCK_OFFSET+block_pointer*BLOCKSIZE, dir_list, BLOCKSIZE);
 
 				if (dir_list[0] == 0x00) {
+					printk("nobody inside");
 					node = create_inode(filename, ic, ret);
 					if (node == NULL) 
 						return NULL;
@@ -374,11 +384,13 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 					
 					return node;
 				} else {
+					printk("folders inside");
 					in *node = (in*) safe_alloc(sizeof(in));
 					if (sb == NULL)
 						return NULL;
 					for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
 						ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
+						printk("looking at file %s\n", node->filename);
 						if (!(strcmp(filename, node->filename))) {
 							printk("File exists, returning\n");
 							return node;
@@ -408,6 +420,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 			}
 
 	} else {
+		printk("slash pos");
 		// index first slash in path
 		int index = (int)(slash_pos - path);
 
@@ -437,7 +450,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 			return NULL;
 
 		if (found) {
-			// file_close(ret);
+			file_close(ret);
 			return get_inode_rec(node, sb, ret, new_path);
 		} else {
 			ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
@@ -445,7 +458,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 			in *new_node = create_inode(before_path, ic, ret);
 			dir_list[i] = new_node->inode_id;
 			ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
-			// file_close(ret);
+			 file_close(ret);
 			return get_inode_rec(new_node, sb, ret, new_path);
 		}
 
@@ -454,6 +467,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 }
 
 in * create_inode(char *filename, int ic, struct file *ret) {
+	printk("cr %s", filename);
 	int ret_;
 
 	in node = {
@@ -468,8 +482,9 @@ in * create_inode(char *filename, int ic, struct file *ret) {
 		return NULL;
 	memcpy(node_ptr, &node, sizeof(in));
 
-	strlcpy(node.filename, filename, strlen(filename));
+	strcpy(node.filename, filename);
 	ret_ = file_write(ret, (ic)*sizeof(in)+INODE_OFFSET, &node, sizeof(in));
+	printk("created %s", node.filename);
 
 	return node_ptr;
 }
@@ -479,18 +494,20 @@ int write_to_file(in *node, char *data) {
 	int i, s, ret_ = 0;
 	int b = node->data[0];
 
-	for (s = 0; (s < BLOCK_LIST_SIZE) && (node->data[s] != 0x00); s++)
+	for (s = 0; ((s < BLOCK_LIST_SIZE) && (node->data[s] != 0x00)); s++)
 			;;
 	for (i = 0; (i < strlen(data)*sizeof(char)); i+=BLOCKSIZE) {
+		printk("s %d i %d add %d\n", s, i, i/BLOCKSIZE);
 		if (i/BLOCKSIZE >= s) {
 			b = acquire_free_block(node);
 		}
+		printk("writing to %d\n", b);
 		ret_ += file_write(res, BLOCK_OFFSET+((short) b)*BLOCKSIZE, data+i, BLOCKSIZE);
 	}
 
 	printk("wrote %d bytes\n", ret_);
 
-	// file_close(res);
+	 file_close(res);
 	return ret_;
 }
 
@@ -513,7 +530,7 @@ char * read_from_file(in *node) {
 	printk("read %d bytes \n", ret_);
 	printk("content: %s \n", buf);
 
-	// file_close(res);
+	 file_close(res);
 
 	return buf;
 }
@@ -545,7 +562,7 @@ int remove_inode(in *node, in *parent) {
 		ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
 	}
 	
-	// file_close(ret);
+	 file_close(ret);
 	return 0;
 }
 
@@ -603,6 +620,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		}
 
 		char am = Message[i+1];
+		printk("p %s", path);
 
 		get_inode(path);
 		// if (!(get_inode(path)))
@@ -660,7 +678,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			// return -1;
 
 		char *data = read_from_file(node);
-		write_msg(data);
+		//write_msg(data);
 		// kfree(data);
 	}
 
