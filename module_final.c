@@ -507,7 +507,7 @@ int write_to_file(in *node, char *data) {
 	for (s = 0; ((s < BLOCK_LIST_SIZE) && (node->data[s] != 0x00)); s++)
 			;;
 	for (i = 0; (i < strlen(data)*sizeof(char)); i+=BLOCKSIZE) {
-		if (i/BLOCKSIZE > s) {
+		if (i/BLOCKSIZE >= s) {
 			b = acquire_free_block(node);
 		}
 		ret_ += file_write(res, BLOCK_OFFSET+((short) b)*BLOCKSIZE, data+i, BLOCKSIZE);
@@ -664,6 +664,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		}
 
 		node = get_inode(path, 0, 0);
+		printk("have inode %p\n", node);
 		// if (!(node))
 		// 	return -1;
 
