@@ -423,8 +423,6 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, boo
 			}	
 		} else {
 			return root;
-			// printk("is it dir? %p %s", root->is_directory, root->filename);
-			// TODO: (cat) logic for file reading
 		}
 
 	} else {
@@ -484,7 +482,6 @@ in * create_inode(char *filename, int ic, struct file *ret, bool is_directory) {
 	in node = {
 		.data = { 0 },
 		.inode_id = ic,
-		// TODO: remove kostyl
 		.is_directory = is_directory
 	};
 
@@ -496,7 +493,6 @@ in * create_inode(char *filename, int ic, struct file *ret, bool is_directory) {
 	strncpy(node.filename, filename, strlen(filename));
 	ret_ = file_write(ret, (ic)*sizeof(in)+INODE_OFFSET, &node, sizeof(in));
 
-	// ---
 	in *node_buf = (in*) kmalloc(sizeof(in), GFP_KERNEL);
 	ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*ic, node_buf, sizeof(in));
 
@@ -796,7 +792,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		printk(path);
 
 		// char *data = read_from_file(node);
-		//write_msg(data);
+		// write_msg(data);
 		// kfree(data);
 
 	} else if (Message[0] == 's') {
@@ -852,7 +848,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		// scp
 		// call touch
 	}
-
 
 	Message_Ptr = Message;
 
