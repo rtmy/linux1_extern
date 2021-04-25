@@ -69,7 +69,7 @@ typedef struct superblock {
 
 
 in * get_inode(char *, bool, bool);
-in * get_inode_rec(in *, superblock_t *, struct file *, char *, bool);
+in * get_inode_rec(in *, superblock_t *, struct file *, char *, bool, bool);
 in * create_inode(char *, int, struct file *, bool);
 
 static struct file_operations file_ops = {
@@ -371,7 +371,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, boo
 
 			if (dir_list[0] == 0x00) {
 				printk("nobody inside");
-				node = create_inode(filename, ic, ret);
+				node = create_inode(filename, ic, ret, is_directory);
 				if (node == NULL) 
 					return NULL;
 
@@ -403,7 +403,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, boo
 
 				// if mkdir, node->is_directory = 1
 				
-				node = create_inode(filename, ic, ret);
+				node = create_inode(filename, ic, ret, is_directory);
 				printk("created %p\n", node);
 				printk("its id is %d\n", node->inode_id);
 				printk("its name is %s\n", node->filename);
@@ -462,7 +462,7 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, boo
 		} else {
 			if (create) {
 				int ic = sb->inode_counter;
-				in *new_node = create_inode(before_path, ic, ret);
+				in *new_node = create_inode(before_path, ic, ret, is_directory);
 				dir_list[i] = new_node->inode_id;
 				ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
 			 	// file_close(ret);
@@ -493,7 +493,7 @@ in * create_inode(char *filename, int ic, struct file *ret, bool is_directory) {
 		return NULL;
 	memcpy(node_ptr, &node, sizeof(in));
 
-	ret_ = strncpy(node.filename, filename, strlen(filename));
+	strncpy(node.filename, filename, strlen(filename));
 	ret_ = file_write(ret, (ic)*sizeof(in)+INODE_OFFSET, &node, sizeof(in));
 
 	// ---
@@ -623,7 +623,7 @@ int copy_file(char *old_path, char *new_path) {
 
 int move_file(char *old_path, char *new_path) {
 	copy_file(old_path, new_path);
-	remove_file(old_path);
+	remove_file(old_path, 0);
 
 	return 0;
 }
@@ -648,7 +648,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			m = Message[i];
 		}
 
-		char am = Message[i+1];
 		printk("p %s", path);
 
 		get_inode(path, 0, 1);
@@ -667,8 +666,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			++i;
 			m = Message[i];
 		}
-
-		char am = Message[i+1];
 
 		node = get_inode(path, 0, 1);
 		// if (!(node))
@@ -710,7 +707,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		// if (!(node))
 			// return -1;
 
-		char *data = read_from_file(node);
+		read_from_file(node);
 		//write_msg(data);
 		// kfree(data);
 
@@ -730,7 +727,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		// if (!(node))
 			// return -1;
 
-		char *data = remove_file(path);
+		remove_file(path, 0);
 
 	} else if (Message[0] == 'p') {
 		// cp file
@@ -848,9 +845,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			++i;
 			m = Message[i];
 		}
-
-		char am = Message[i+1];
-		printk("p %s", path);
 
 		get_inode(path, 1, 1);
 
