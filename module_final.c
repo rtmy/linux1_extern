@@ -425,17 +425,20 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 		int index = (int)(slash_pos - path);
 
 		// everything down the slash
-		char *new_path = (char*) path+(index*sizeof(char));
+		char *new_path = (char*) path+(sizeof(char)+index*sizeof(char));
 
 		// everything before the slash
 		char *before_path = (char*) safe_alloc(index);
-		strlcpy(before_path, path, index);
+		printk("ix %d\n", index);
+		strlcpy(before_path, path, index+1);
+		printk("got bp %s\n", before_path);
+		printk("got np %s\n", new_path);
 
-		short *dir_list = safe_alloc(DIR_LIST_SIZE);
+		short *dir_list = safe_alloc(BLOCKSIZE);
 		int ret_ = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
 
 		int found = 0;
-		in *node;
+		in *node = (in*) safe_alloc(sizeof(in));
 		for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
 			ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
 			if (!(strcmp(before_path, node->filename))) {
@@ -444,21 +447,21 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 			}
 		}
 
-		struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 		superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
-		if (sb == NULL)
-			return NULL;
+		//if (sb == NULL)
+		//	return NULL;
+		ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
 
 		if (found) {
-			file_close(ret);
+			printk("found\n");
+		//	file_close(ret);
 			return get_inode_rec(node, sb, ret, new_path);
 		} else {
-			ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
 			int ic = sb->inode_counter;
 			in *new_node = create_inode(before_path, ic, ret);
 			dir_list[i] = new_node->inode_id;
 			ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
-			 file_close(ret);
+		//	 file_close(ret);
 			return get_inode_rec(new_node, sb, ret, new_path);
 		}
 
