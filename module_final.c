@@ -67,8 +67,8 @@ typedef struct superblock {
 	int inode_counter;
 } superblock_t;
 
-in * get_inode_rec(in *, superblock_t *, struct file *, char *);
-in * create_inode(char *, int, struct file *);
+in * get_inode_rec(in *, superblock_t *, struct file *, char *, bool);
+in * create_inode(char *, int, struct file *, bool);
 
 static struct file_operations file_ops = {
 	.read = device_read,
@@ -280,7 +280,7 @@ int write_msg(char* msg) {
 	return 0;
 }
 
-in * get_inode(char *path) {
+in * get_inode(char *path, bool is_directory) {
 	int ret_;
 
 	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
@@ -327,7 +327,7 @@ in * get_inode(char *path) {
 	 	ret_ = file_write(ret, sizeof(int), &sb, sizeof(superblock_t));
 	 	in root = {
 	 		.filename = "/",
-	 		.is_directory = (char) 1,
+	 		.is_directory = is_directory,
 	 		.data = { 0 },
 	 		.inode_id = 1
 	 	};
@@ -345,7 +345,7 @@ in * get_inode(char *path) {
 	 return 0;
 }
 
-in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
+in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, bool is_directory) {
 	// TODO: (cd) ignore everything, return inode
 	// TODO: (mkdir) or (touch) depending on command, create different inode types
 
@@ -455,21 +455,21 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path) {
 
 		if (found) {
 		//	file_close(ret);
-			return get_inode_rec(node, sb, ret, new_path);
+			return get_inode_rec(node, sb, ret, new_path, is_directory);
 		} else {
 			int ic = sb->inode_counter;
 			in *new_node = create_inode(before_path, ic, ret);
 			dir_list[i] = new_node->inode_id;
 			ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(root->data[0]), dir_list, BLOCKSIZE);
 		//	 file_close(ret);
-			return get_inode_rec(new_node, sb, ret, new_path);
+			return get_inode_rec(new_node, sb, ret, new_path, is_directory);
 		}
 
 	}
 	return 0x00;
 }
 
-in * create_inode(char *filename, int ic, struct file *ret) {
+in * create_inode(char *filename, int ic, struct file *ret, bool is_directory) {
 	printk("cr %s", filename);
 	int ret_;
 
@@ -477,7 +477,7 @@ in * create_inode(char *filename, int ic, struct file *ret) {
 		.data = { 0 },
 		.inode_id = ic,
 		// TODO: remove kostyl
-		.is_directory = (char) 1
+		.is_directory = is_directory
 	};
 
 	in *node_ptr = (in*) safe_alloc(sizeof(in));
@@ -590,7 +590,7 @@ int remove_file(char *path) {
 
 	printk("ok pp %s\n", parent_path);
 
-	in *parent_node = get_inode(parent_path);
+	in *parent_node = get_inode(parent_path, 1, 0);
 	printk("pn %p\n", parent_node);
 	in *node = get_inode(path);
 	printk("n %p\n", node);
@@ -792,9 +792,8 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		node = (in*) safe_alloc(sizeof(in));
 		for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
-			ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
+			ret_ = file_read(res, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
 			printk("%s\n", node->filename);
-			printk("File exists, returning\n");
 		}
 
 		file_close(res);
