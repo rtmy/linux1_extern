@@ -642,28 +642,27 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		ret_ = write_to_file(node, data);
 
 	// 	// kfree(data);
+
+	} else if (Message[0] == 'c') {
+		// todo function of parsing touch message
+		char m = Message[2];
+		char path[100] = { 0x00 };
+		i = 2;
+
+		while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
+			path[i-2] = m;
+			++i;
+			m = Message[i];
+		}
+
+		node = get_inode(path);
+		// if (!(node))
+			// return -1;
+
+		char *data = read_from_file(node);
+		write_msg(data);
+		// kfree(data);
 	}
-
-	// } else if (Message[0] == 'c') {
-	// 	// todo function of parsing touch message
-	// 	char m = Message[2];
-	// 	char path[100] = { 0x00 };
-	// 	i = 2;
-
-	// 	while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
-	// 		path[i-2] = m;
-	// 		++i;
-	// 		m = Message[i];
-	// 	}
-
-	// 	node = get_inode(path);
-	// 	// if (!(node))
-	// 		// return -1;
-
-	// 	char *data = read_from_file(node);
-	// 	write_msg(data);
-	// 	// kfree(data);
-	// }
 
 	// cat -> return data
 	// cd -> too, return dir_list
