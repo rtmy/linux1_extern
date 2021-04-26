@@ -26,7 +26,7 @@
 `make test`, get nod number, then  
 `sudo mknod /dev/module c <nod number> 0`  
 `insmod module_final.ko`  
-`./server <port>`  
+sudo `./server <port>`  
 `./client <ip addr> <port>`  
 
 ### format
