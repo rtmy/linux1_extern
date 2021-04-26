@@ -109,12 +109,8 @@ int main(int argc, char *argv[]) {
         }
         else if (strstr(command, "cd")) {
             printf("called cd\n");
-            ret_ = talk(command, ip, port);
-            if ((ret == 2)) {
-                printk
-            } else {
+            if ((ret_ = talk(command, ip, port)))
                 printf("Error during talk\n");
-            }
         }
         else if (strstr(command, "ls")) {
             printf("called ls\n");

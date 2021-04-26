@@ -678,7 +678,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		read_from_file(node);
 		//write_msg(data);
-		kfree(data);
 
 		write_msg("success");
 
@@ -765,7 +764,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			return -1;
 
 		write_msg(path);
-		kfree(data);
+		kfree(node);
 
 	} else if (Message[0] == 's') {
 		// ls
