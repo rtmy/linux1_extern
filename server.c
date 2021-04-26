@@ -22,6 +22,24 @@ int translate(char *strccc) {
 	char* buf = (char*) malloc(sizeof(char)*BUF_LEN);
 
 	int ret = sscanf(strccc, "%s %s %s", command, path, buf);
+
+	if (strstr(command, "cat"))
+		command = "c";
+	else if  (strstr(command, "touch"))
+		command = "a";
+	else if  (strstr(command, "rm"))
+		command = "r";
+	else if  (strstr(command, "mkdir"))
+		command = "i";
+	else if  (strstr(command, "ls"))
+		command = "s";
+	else if  (strstr(command, "cd"))
+		command = "d";
+	else if  (strstr(command, "mv"))
+		command = "v";
+	else if  (strstr(command, "cp"))
+		command = "p";
+
 	if (ret > 0) {
 		fprintf(stderr, "got %s %s %s\n", command, path, buf);
 		return 0;

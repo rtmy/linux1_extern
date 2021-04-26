@@ -89,38 +89,60 @@ int main(int argc, char *argv[]) {
     while (strcmp(command, "exit") && (ret != NULL)) {
         if (strstr(command, "touch")) {
             printf("called touch\n");
-            if ((ret_ = talk(command, ip, port))) {
+            if ((ret_ = talk(command, ip, port)))
                 printf("Error during talk\n");
-            }
         }
         else if (strstr(command, "cat")) {
             printf("called cat\n");
+            if ((ret_ = talk(command, ip, port)))
+                printf("Error during talk\n");
         }
         else if (strstr(command, ">")) {
             printf("called >\n");
+            if ((ret_ = talk(command, ip, port)))
+                printf("Error during talk\n");
         }
         else if (strstr(command, "rm")) {
             printf("called rm\n");
+            if ((ret_ = talk(command, ip, port)))
+                printf("Error during talk\n");
         }
         else if (strstr(command, "cd")) {
             printf("called cd\n");
+            ret_ = talk(command, ip, port);
+            if ((ret == 2)) {
+                printk
+            } else {
+                printf("Error during talk\n");
+            }
         }
         else if (strstr(command, "ls")) {
             printf("called ls\n");
+            if ((ret_ = talk(command, ip, port)))
+                printf("Error during talk\n");
         }
         else if (strstr(command, "cp")) {
             printf("called cp\n");
+            if ((ret_ = talk(command, ip, port)))
+                printf("Error during talk\n");
         }
         else if (strstr(command, "mv")) {
             printf("called mv\n");
+            if ((ret_ = talk(command, ip, port)))
+                printf("Error during talk\n");
         }
         else if (strstr(command, "mkdir")) {
             printf("called mkdir\n");
+            if ((ret_ = talk(command, ip, port)))
+                printf("Error during talk\n");
         }
         else if(strstr(command, "help")) {
             printf("Commands:\n"
-            "touch \n"
-            "rm \n");
+            "cd <path>\n"
+            "touch <file path>\n"
+            "rm <file path>\n"
+
+            );
         }
 
         printf("> ");
