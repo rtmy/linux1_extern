@@ -793,12 +793,16 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			return -1;
 
 		node = (in*) safe_alloc(sizeof(in));
+		char *msg = (char*) safe_alloc(sizeof(char)*2000);
+		sprintf(msg, "");
+
+		int ret_msg = 0;
 		for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
 			ret_ = file_read(res, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
-			printk("%s\n", node->filename);
+			ret_msg += sprintf(msg+ret_msg, "%s\n", node->filename);
+			ret_msg += 1;
 		}
-
-		write_msg("success");
+		write_msg(msg);
 
 		file_close(res);
 
