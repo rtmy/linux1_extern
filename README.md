@@ -4,7 +4,6 @@
 * mkdir works like mkdir -p  
 
 ## TODO
-* add words to client
 * no writing if no file exists
 * no ls if no dir
 * makefile update
@@ -13,9 +12,9 @@
 * cp -r 
 
 ## Known bugs
-* ls for empty dir -> gets Killed — check emptiness
+* ls for empty dir -> gets freezed — check emptiness
 * ls for nested dirs -> gets Killed — confirm to call ls on parent
-* ls parent after rm — check residues during ls
+* ls parent after rm —> gets Killed check residues during ls
 * removal of original data removes copy data -- check how its copied
 
 ## Build
@@ -27,7 +26,7 @@
 `make test`, get nod number, then  
 `sudo mknod /dev/module c <nod number> 0`  
 `insmod module_final.ko`  
-`./server <port>`  
+sudo `./server <port>`  
 `./client <ip addr> <port>`  
 
 ### format
