@@ -4,7 +4,6 @@
 * mkdir works like mkdir -p  
 
 ## TODO
-* add words to client
 * no writing if no file exists
 * no ls if no dir
 * makefile update
