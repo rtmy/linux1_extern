@@ -41,7 +41,7 @@ int translate(char *strccc) {
 		command = "p";
 
 	if (ret > 0) {
-		fprintf(stderr, "got %s %s %s\n", command, path, buf);
+		sprintf(strccc, "%s %s %s", command, path, buf);
 		return 0;
 	}
 	return 1;
