@@ -694,9 +694,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			m = Message[i];
 		}
 
-		if (!(node))
-			return -1;
-
 		remove_file(path, 0);
 		write_msg("success");
 
@@ -781,7 +778,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			m = Message[i];
 		}
 
-		in *node = get_inode(path, 0, 0);
+		in *node = get_inode(path, 1, 0);
 		if (node == NULL) {
 			file_close(res);
 			return -1;
@@ -794,10 +791,16 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		node = (in*) safe_alloc(sizeof(in));
 		char *msg = (char*) safe_alloc(sizeof(char)*2000);
-		sprintf(msg, "");
+		sprintf(msg, "empty");
 
 		int ret_msg = 0;
-		for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
+
+		char *num_buff = (char*) safe_alloc(sizeof(char)*100);
+		for (i = 0; (i < DIR_LIST_SIZE); i++) {
+			sprintf(num_buff, "%d", dir_list[i]);
+			if (num_buff[0] == '0') {
+				continue;
+			}
 			ret_ = file_read(res, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
 			ret_msg += sprintf(msg+ret_msg, "%s\n", node->filename);
 			ret_msg += 1;
