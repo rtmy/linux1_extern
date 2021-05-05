@@ -12,9 +12,6 @@
 * cp -r 
 
 ## Known bugs
-* ls for empty dir -> gets freezed — check emptiness
-* ls for nested dirs -> gets Killed — confirm to call ls on parent
-* ls parent after rm —> gets Killed check residues during ls
 * removal of original data removes copy data -- check how its copied
 
 ## Build
