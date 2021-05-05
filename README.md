@@ -12,7 +12,6 @@
 * cp -r 
 
 ## Known bugs
-* removal of original data removes copy data -- check how its copied
 
 ## Build
 `set module_final.c FILESYSTEM const to where the fs should be`  
