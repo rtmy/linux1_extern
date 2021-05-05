@@ -379,13 +379,21 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, boo
 				in *node = (in*) safe_alloc(sizeof(in));
 				if (sb == NULL)
 					return NULL;
-				for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
+				int zeropos = 0;
+				for (i = 0; (i < DIR_LIST_SIZE); i++) {
+					if (dir_list[i] == 0x00) {
+						if (zeropos == 0)
+							zeropos = i;
+						continue;
+					}
 					ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
 					if (!(strcmp(filename, node->filename))) {
 						printk("File exists, returning\n");
+						printk("found %s\n", node->filename);
 						return node;
 					}
 				}
+				i = zeropos;
 
 				if (!(create))
 					return NULL;
@@ -427,7 +435,9 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, boo
 
 		int found = 0;
 		in *node = (in*) safe_alloc(sizeof(in));
-		for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
+		for (i = 0; (i < DIR_LIST_SIZE); i++) {
+			if (dir_list[i] == 0x00)
+				continue;
 			ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
 			if (!(strcmp(before_path, node->filename))) {
 				found = 1;
@@ -504,8 +514,9 @@ char * read_from_file(in *node) {
 	struct file *res = file_open(FILESYSTEM, O_RDWR, 0);
 	int i, j, b, ret_ = 0;
 
-	for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); i++)
+	for (i = 0; (i < BLOCK_LIST_SIZE) && (node->data[i] != 0x00); ++i)
 			;;
+	printk("i is %d\n", node->data[i]);
 
 	char *buf = (char*) safe_alloc(BLOCKSIZE*i);
 	if (buf == NULL)
@@ -515,6 +526,7 @@ char * read_from_file(in *node) {
 		b = node->data[j];
 		ret_ += file_read(res, BLOCK_OFFSET+((short) b)*BLOCKSIZE, buf+BLOCKSIZE*j, BLOCKSIZE);
 	}
+	printk("from %s\n", node->filename);
 
 	printk("read %d bytes \n", ret_);
 	printk("content: %s \n", buf);
