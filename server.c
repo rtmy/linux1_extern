@@ -13,6 +13,9 @@
 #define COMMAND_LEN 10
 #define PATH_LEN 25
 #define BUF_LEN 1000
+#define ERROR_MSG "no such file or directory"
+
+static char current_path[PATH_LEN];
 
 
 int translate(char *strccc) {
@@ -43,6 +46,10 @@ int translate(char *strccc) {
 		command = "t";
 	} else if (strstr(command, "strf")) {
 		command = "f";
+	}
+
+	if (!(path[0] == '/')) {
+		sprintf(path, "%s/%s", current_path, path);
 	}
 
 	if (ret > 0) {
@@ -125,20 +132,33 @@ int main(int argc, char *argv[]) {
 			// close(fp);
 
     		// int fpr = open("/dev/module", O_RDONLY);
-			off_t off = lseek(fp, 0, SEEK_SET);
-			char *read_str = malloc(COMMAND_LEN + PATH_LEN + BUF_LEN);
+			// off_t off = lseek(fp, 0, SEEK_SET);
+			// char *read_str = malloc(COMMAND_LEN + PATH_LEN + BUF_LEN);
 			// len = read(fpr, read_str, COMMAND_LEN + PATH_LEN + BUF_LEN);
 			// close(fpr);
 
-	        snprintf(sendBuff, strlen(read_str)*sizeof(char), "%s", read_str);
-	        len = write(connfd, sendBuff, strlen(sendBuff));
+	        // snprintf(sendBuff, strlen(read_str)*sizeof(char), "%s", read_str);
+	        // len = write(connfd, sendBuff, strlen(sendBuff));
 			continue;
-		} 
+		} else if (strccc[0] == 'd') {
+    		// int fp = open("/dev/module", O_WRONLY | O_CREAT | O_APPEND);
+			// len = write(fp, strccc, BUF_LEN);
+			// close(fp);
 
-		// todo: if 'd', write path to a global variable 
-		// remember cd path and invoke commands, appending path to it to beginning
-		// by default path ""
-		// if cd starts with /, rewrite it
+    		// int fpr = open("/dev/module", O_RDONLY);
+			// off_t off = lseek(fp, 0, SEEK_SET);
+			// char *read_str = malloc(COMMAND_LEN + PATH_LEN + BUF_LEN);
+			// len = read(fpr, read_str, COMMAND_LEN + PATH_LEN + BUF_LEN);
+			// close(fpr);
+
+			// if (strstr(read_str, "failure")) {
+		 //        write(connfd, ERROR_MSG, strlen(ERROR_MSG));
+			// } else {
+			// 	write(connfd, read_str, strlen(ERROR_MSG));
+			// }
+	  //       close(connfd);
+	        continue;
+		}
 
 		fprintf(stderr, "writing to char device\n");
 

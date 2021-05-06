@@ -840,6 +840,24 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		write_msg("success");
 
+	} else if (Message[0] == 'd') {
+		char m = Message[2];
+		char path[100] = { 0x00 };
+		i = 2;
+
+		while ((ispunct(m) || isalpha(m)) && (i < BUF_LEN)) {
+			path[i-2] = m;
+			++i;
+			m = Message[i];
+		}
+
+		node = get_inode(path, 1, 0);
+
+		if (node == NULL) {
+			write_msg("failure");
+			return -1;
+		}
+		write_msg(path);
 	}
 
 	Message_Ptr = Message;
