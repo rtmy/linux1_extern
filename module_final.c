@@ -635,8 +635,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		get_inode(path, 0, 1);
 
 		write_msg("success");
-		if (!(get_inode(path)))
-			return -1;
 
 	} else if (Message[0] == '>') {
 		// >
