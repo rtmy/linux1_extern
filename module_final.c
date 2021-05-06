@@ -379,11 +379,13 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, boo
 				in *node = (in*) safe_alloc(sizeof(in));
 				if (sb == NULL)
 					return NULL;
-				for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
-					ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
-					if (!(strcmp(filename, node->filename))) {
-						printk("File exists, returning\n");
-						return node;
+				for (i = 0; (i < DIR_LIST_SIZE); i++) {
+					if (dir_list[i] != 0x00) {
+						ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
+						if (!(strcmp(filename, node->filename))) {
+							printk("File exists, returning\n");
+							return node;
+						}
 					}
 				}
 
@@ -427,11 +429,13 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, boo
 
 		int found = 0;
 		in *node = (in*) safe_alloc(sizeof(in));
-		for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
-			ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
-			if (!(strcmp(before_path, node->filename))) {
-				found = 1;
-				break;
+		for (i = 0; (i < DIR_LIST_SIZE); i++) {
+			if (dir_list[i] != 0x00) {
+				ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
+				if (!(strcmp(before_path, node->filename))) {
+					found = 1;
+					break;
+				}
 			}
 		}
 
@@ -538,12 +542,14 @@ int remove_inode(in *node, in *parent) {
 	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 	ret_ = file_read(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
 
-	for (i = 0; (i < DIR_LIST_SIZE) && (dir_list[i] != 0x00); i++) {
-		ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node_buf, sizeof(in));
+	for (i = 0; (i < DIR_LIST_SIZE); i++) {
+		if (dir_list[i] != 0x00) {
+			ret_ = file_read(ret, INODE_OFFSET+sizeof(in)*dir_list[i], node_buf, sizeof(in));
 
-		if (!(strcmp(node->filename, node_buf->filename))) {
-			found = 1;
-			break;
+			if (!(strcmp(node->filename, node_buf->filename))) {
+				found = 1;
+				break;
+			}
 		}
 	}
 
@@ -826,9 +832,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 
 		write_msg("success");
 
-	} else if (Message[0] == 'o') {
-		// scp
-		// call touch
 	}
 
 	Message_Ptr = Message;

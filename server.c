@@ -39,6 +39,11 @@ int translate(char *strccc) {
 		command = "v";
 	else if  (strstr(command, "cp"))
 		command = "p";
+	else if (strstr(command, "scpt")) {
+		command = "t";
+	} else if (strstr(command, "strf")) {
+		command = "f";
+	}
 
 	if (ret > 0) {
 		sprintf(strccc, "%s %s %s", command, path, buf);
@@ -94,6 +99,47 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 
+		char path[PATH_LEN] = { 0x00 };
+		char content[BUF_LEN] = { 0x00 };
+		char cmd[COMMAND_LEN+PATH_LEN+BUF_LEN+2] = { 0x00 };
+
+		if (strccc[0] == 't') {
+			sscanf(strccc+2, "%s %s", path, content);
+    		int fp = open("/dev/module", O_WRONLY | O_CREAT | O_APPEND);
+    		sprintf(cmd, "t %s", path);
+			len = write(fp, cmd, BUF_LEN);
+			close(fp);
+
+    		fp = open("/dev/module", O_WRONLY | O_CREAT | O_APPEND);
+    		sprintf(cmd, "> %s %s", path, content);
+			len = write(fp, cmd, BUF_LEN);
+			close(fp);
+
+			continue;
+
+		} else if (strccc[0] == 'f') {
+			sscanf(strccc+2, "%s %s", path, content);
+    		// int fp = open("/dev/module", O_WRONLY | O_CREAT | O_APPEND);
+    		sprintf(cmd, "cat %s", path);
+			// len = write(fp, cmd, BUF_LEN);
+			// close(fp);
+
+    		// int fpr = open("/dev/module", O_RDONLY);
+			off_t off = lseek(fp, 0, SEEK_SET);
+			char *read_str = malloc(COMMAND_LEN + PATH_LEN + BUF_LEN);
+			// len = read(fpr, read_str, COMMAND_LEN + PATH_LEN + BUF_LEN);
+			// close(fpr);
+
+	        snprintf(sendBuff, strlen(read_str)*sizeof(char), "%s", read_str);
+	        len = write(connfd, sendBuff, strlen(sendBuff));
+			continue;
+		} 
+
+		// todo: if 'd', write path to a global variable 
+		// remember cd path and invoke commands, appending path to it to beginning
+		// by default path ""
+		// if cd starts with /, rewrite it
+
 		fprintf(stderr, "writing to char device\n");
 
 		int fp = open("/dev/module", O_WRONLY | O_CREAT | O_APPEND);
@@ -117,11 +163,14 @@ int main(int argc, char *argv[]) {
 
 		fprintf(stderr, "writing to socket %s\n", read_str);
 
-	        snprintf(sendBuff, strlen(read_str)*sizeof(char), "%s", read_str);
-	        len = write(connfd, sendBuff, strlen(sendBuff));
+        snprintf(sendBuff, strlen(read_str)*sizeof(char), "%s", read_str);
+        len = write(connfd, sendBuff, strlen(sendBuff));
 
 		fprintf(stderr, "wrote to socket %d %s\n", strlen(sendBuff), sendBuff);
 	        close(connfd);
 	        sleep(1);
+
+	    free(path);
+	    free(content);
      }
 }
