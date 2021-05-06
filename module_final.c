@@ -781,7 +781,6 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		path[strlen(path)] = '\n';
 
 		write_msg(path);
-		kfree(node);
 
 	} else if (Message[0] == 's') {
 		// ls
