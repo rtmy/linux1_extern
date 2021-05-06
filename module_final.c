@@ -690,10 +690,11 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		if (!(node))
 			return -1;
 
-		read_from_file(node);
+		char *content = read_from_file(node);
+		content[strlen(content)] = '\n';
 		//write_msg(data);
 
-		write_msg("success");
+		write_msg(content);
 
 	} else if (Message[0] == 'r') {
 		// rm
@@ -771,11 +772,17 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		}
 
 		node = get_inode(path, 1, 0);
-		if (!(node))
+		printk("inode %p\n", node);
+		if (!(node)) {
+			printk("no node!\n");
+			write_msg("failure");
 			return -1;
+		}
+		path[strlen(path)] = '\n';
+		//printk("cd to %s\n", path);
 
 		write_msg(path);
-		kfree(node);
+		//kfree(node);
 
 	} else if (Message[0] == 's') {
 		// ls
@@ -816,6 +823,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 				continue;
 			}
 			ret_ = file_read(res, INODE_OFFSET+sizeof(in)*dir_list[i], node, sizeof(in));
+			printk("%s ", node->filename);
 			ret_msg += sprintf(msg+ret_msg, "%s\n", node->filename);
 			ret_msg += 1;
 		}

@@ -171,11 +171,6 @@ int main(int argc, char *argv[]) {
             if ((ret_ = talk(command, ip, port)))
                 printf("Error during talk\n");
         }
-        else if (strstr(command, "cp")) {
-            printf("called cp\n");
-            if ((ret_ = talk(command, ip, port)))
-                printf("Error during talk\n");
-        }
         else if (strstr(command, "mv")) {
             printf("called mv\n");
             if ((ret_ = talk(command, ip, port)))
@@ -206,6 +201,7 @@ int main(int argc, char *argv[]) {
 
             printf("from path %s\n", path);
             char *content = read_input_file(path);
+	    printf("read %s from input file\n", content);
 
             char *new_command = (char*) malloc(sizeof(char) * BUF_LEN);
 
@@ -233,9 +229,13 @@ int main(int argc, char *argv[]) {
 
             char *new_command = (char*) malloc(sizeof(char) * BUF_LEN);
             sprintf(new_command, "scpf %s", path);
+	    printf("to send %s\n", new_command);
 
-            if ((ret_ = talk(command, ip, port)))
+            if ((ret_ = talk(new_command, ip, port)))
                 printf("Error during talk\n");
+
+            printf("talked\n");
+	    printf("gonna write to %s\n", to_path);
 
             FILE *file = fopen(to_path, "w");
 
@@ -243,6 +243,11 @@ int main(int argc, char *argv[]) {
                 if (results == EOF)
                     ;;
             fclose(file);
+        }
+        else if (strstr(command, "cp")) {
+            printf("called cp\n");
+            if ((ret_ = talk(command, ip, port)))
+                printf("Error during talk\n");
         }
         else if(strstr(command, "help")) {
             printf("Commands:\n"
