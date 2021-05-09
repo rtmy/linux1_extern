@@ -58,7 +58,7 @@ typedef struct inode_mini {
 
 	int am;
 
-	short data[BLOCK_LIST_SIZE]; // unsigned long long for usage as offset
+	short data[BLOCK_LIST_SIZE];
 
 	int inode_id;
 } in;
@@ -283,24 +283,25 @@ in * get_inode(char *path, bool is_directory, bool create) {
 	struct file *ret = file_open(FILESYSTEM, O_RDWR, 0);
 
 	int *activation_value = (int*) safe_alloc(sizeof(int));
-	// if (activation_value == NULL)
-	// 	return 0;
+	if (activation_value == NULL)
+		return 0;
 	ret_ = file_read(ret, 0, activation_value, sizeof(int));
 
 	// char ans[] = "Formatted";
 	// if (write_msg(ans))
-	// 	return NULL;
+		// return NULL;
 
-	 if (*activation_value == 1) {
+	if (*activation_value == 1) {
 
-	 	superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
-		if (sb == NULL)
-			return NULL;
-	 	ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
-	 	in *root_node = (in*) safe_alloc(sizeof(in));
-		if (root_node == NULL)
-			return NULL;
-	 	ret_ = file_read(ret, INODE_OFFSET, root_node, sizeof(in));
+		superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
+	if (sb == NULL)
+		return NULL;
+		ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
+		in *root_node = (in*) safe_alloc(sizeof(in));
+	if (root_node == NULL)
+		return NULL;
+		ret_ = file_read(ret, INODE_OFFSET, root_node, sizeof(in));
+
  	if (!(strcmp(path, "/")) || strlen(path) == 1) {
  		return root_node;
  	} else {
@@ -310,35 +311,35 @@ in * get_inode(char *path, bool is_directory, bool create) {
  		return node;
  	}
 
-		kfree(activation_value);
-		kfree(sb);
-		kfree(root_node);
+	kfree(activation_value);
+	kfree(sb);
+	kfree(root_node);
 
-	 } else {
-	 	int activation_byte = 1;
-	 	ret_ = file_write(ret, 0, &activation_byte, sizeof(int));
-	 	superblock_t sb = {
-	 	       .inode_counter = 1
-	 	};
-	 	ret_ = file_write(ret, sizeof(int), &sb, sizeof(superblock_t));
-	 	in root = {
-	 		.filename = "/",
-	 		.is_directory = 1,
-	 		.data = { 0 },
-	 		.inode_id = 1
-	 	};
-	 	ret_ = file_write(ret, INODE_OFFSET, &root, sizeof(in));
+	} else {
+		int activation_byte = 1;
+		ret_ = file_write(ret, 0, &activation_byte, sizeof(int));
+		superblock_t sb = {
+		       .inode_counter = 1
+		};
+		ret_ = file_write(ret, sizeof(int), &sb, sizeof(superblock_t));
+		in root = {
+			.filename = "/",
+			.is_directory = 1,
+			.data = { 0 },
+			.inode_id = 1
+		};
+		ret_ = file_write(ret, INODE_OFFSET, &root, sizeof(in));
 
- 	short dir_list[DIR_LIST_SIZE] = { 0x00 };
- 	ret_ = file_write(ret, BLOCK_OFFSET, &dir_list, sizeof(dir_list));
+	 	short dir_list[DIR_LIST_SIZE] = { 0x00 };
+	 	ret_ = file_write(ret, BLOCK_OFFSET, &dir_list, sizeof(dir_list));
 
-	 	if (set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0))
-	 		return NULL;
-	 	return &root;
+		 	if (set_bitmap(BLOCK_MAP_OFFSET, BLOCK_MAP_SIZE, 0))
+		 		return NULL;
+		 	return &root;
 	 }
 
-	 file_close(ret);
-	 return 0;
+	file_close(ret);
+	return 0;
 }
 
 in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, bool is_directory, bool create) {
@@ -446,8 +447,8 @@ in * get_inode_rec(in *root, superblock_t *sb, struct file *ret, char *path, boo
 		}
 
 		superblock_t *sb = (superblock_t*) safe_alloc(sizeof(superblock_t));
-		//if (sb == NULL)
-		//	return NULL;
+		if (sb == NULL)
+			return NULL;
 		ret_ = file_read(ret, sizeof(int), sb, sizeof(superblock_t));
 
 		if (found) {
@@ -506,7 +507,7 @@ int write_to_file(in *node, char *data) {
 		ret_ += file_write(res, BLOCK_OFFSET+((short) b)*BLOCKSIZE, data+i, BLOCKSIZE);
 	}
 
-	 file_close(res);
+	file_close(res);
 	return ret_;
 }
 
@@ -569,7 +570,7 @@ int remove_inode(in *node, in *parent) {
 		ret_ = file_write(ret, BLOCK_OFFSET+BLOCKSIZE*(parent->data[0]), dir_list, BLOCKSIZE);
 	}
 	
-	 file_close(ret);
+	file_close(ret);
 	return 0;
 }
 
@@ -634,8 +635,9 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 		get_inode(path, 0, 1);
 
 		write_msg("success");
-		// if (!(get_inode(path)))
-			// return -1;
+		if (!(get_inode(path)))
+			return -1;
+
 	} else if (Message[0] == '>') {
 		// >
 
@@ -779,10 +781,9 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len, l
 			return -1;
 		}
 		path[strlen(path)] = '\n';
-		//printk("cd to %s\n", path);
 
 		write_msg(path);
-		//kfree(node);
+		kfree(node);
 
 	} else if (Message[0] == 's') {
 		// ls
